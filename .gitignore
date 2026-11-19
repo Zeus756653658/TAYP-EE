@@ -1,0 +1,53 @@
+# =========================================================
+# TAYP EE Cloud POS — Comprehensive Git Ignore
+# Protects private secrets, local business data, and heavy dependencies
+# =========================================================
+
+# --- 1. Environment Secrets & Passwords (CRITICAL) ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- 2. Local Business Data (Cloud First) ---
+data/*.json
+!data/.gitkeep
+data/deleted_staff.json
+data/users.json
+data/cloud_config.json
+data/auth_config.json
+
+# --- 3. Backup Archives ---
+backups/
+*.zip
+*.tar.gz
+
+# --- 4. Python Environment & Binaries ---
+.venv/
+venv/
+ENV/
+env/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+
+# --- 5. Editor, IDE & System Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+
+# --- 6. Temporary & Testing Artifacts ---
+test_*.py
+test_*.html
+cdp_*.py
+cdp_*.png
+screen_*.png
+debug_*.py
+build_favicons.py

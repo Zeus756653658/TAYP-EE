@@ -1,0 +1,370 @@
+/* ==========================================================================
+   TAYP EE — Repass Password Reset Portal Stylesheet
+   Modern, Enterprise Grade UI with Fluid Animations
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root {
+  --slds-blue: #0176D3;
+  --slds-blue-dark: #014486;
+  --slds-navy: #001E42;
+  --slds-green: #2E844A;
+  --slds-orange: #DD7A00;
+  --slds-red: #EA001E;
+  --slds-border: #DDDBDA;
+  --slds-bg-light: #F8F9FA;
+  --slds-text-main: #181818;
+  --slds-text-muted: #706E6B;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--slds-text-main);
+  background: linear-gradient(135deg, #001E42 0%, #032D60 40%, #001E42 100%);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background Ambient Lighting Effect */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(1, 118, 211, 0.25) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(46, 132, 74, 0.20) 0%, transparent 45%);
+  z-index: 0;
+}
+
+/* Subtle Grid Pattern Overlay */
+.bg-grid-pattern {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glass Card Container */
+.portal-card {
+  position: relative;
+  z-index: 10;
+  background: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header Banner */
+.portal-header {
+  background: #001E42;
+  color: #FFFFFF;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid #0176D3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Stepper Progress Bar */
+.stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: #F8F9FA;
+  border-bottom: 1px solid var(--slds-border);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--slds-text-muted);
+  transition: all 0.25s ease;
+}
+
+.step-item.active {
+  color: var(--slds-blue);
+}
+
+.step-item.completed {
+  color: var(--slds-green);
+}
+
+.step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: #DDDBDA;
+  color: #3E3E3C;
+  transition: all 0.25s ease;
+}
+
+.step-item.active .step-circle {
+  background: var(--slds-blue);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.2);
+}
+
+.step-item.completed .step-circle {
+  background: var(--slds-green);
+  color: #FFFFFF;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 2px;
+  background: #E5E5E5;
+  margin: 0 0.5rem;
+  transition: background 0.3s ease;
+}
+
+.stepper-line.active {
+  background: var(--slds-green);
+}
+
+/* Inputs & Form Controls */
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--slds-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--slds-text-main);
+  background: #FFFFFF;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--slds-blue);
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.15);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--slds-blue);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.825rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(1, 118, 211, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--slds-blue-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(1, 118, 211, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-success {
+  background: var(--slds-green);
+  box-shadow: 0 2px 4px rgba(46, 132, 74, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #226438;
+  box-shadow: 0 4px 8px rgba(46, 132, 74, 0.3);
+}
+
+/* Step Fade & Slide Transitions */
+.step-pane {
+  animation: slideFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   ANIMATED SUCCESS / DONE SCREEN STYLES
+   ========================================================================== */
+
+.done-hero-container {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Pulse Rings behind Checkmark */
+.pulse-ring-wrapper {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(46, 132, 74, 0.15);
+  animation: pulseWave 2s infinite ease-out;
+}
+
+.pulse-ring:nth-child(2) {
+  animation-delay: 0.6s;
+}
+
+@keyframes pulseWave {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+}
+
+/* SVG Drawn Checkmark */
+.checkmark-svg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 3;
+  stroke: #2E844A;
+  stroke-miterlimit: 10;
+  box-shadow: inset 0px 0px 0px #2E844A;
+  animation: fillCircle 0.4s ease-in-out 0.4s forwards, scaleCircle 0.3s ease-in-out 0.9s both;
+  position: relative;
+  z-index: 2;
+}
+
+.checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3;
+  stroke-miterlimit: 10;
+  stroke: #2E844A;
+  fill: none;
+  animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  stroke: #2E844A;
+  stroke-width: 4;
+  animation: strokeCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.65s forwards;
+}
+
+@keyframes strokeCircle {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes strokeCheck {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fillCircle {
+  100% {
+    box-shadow: inset 0px 0px 0px 40px #EBF5EE;
+  }
+}
+
+@keyframes scaleCircle {
+  0%, 100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+/* Confetti Falling Animation */
+.confetti-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  top: -20px;
+  opacity: 0.9;
+  border-radius: 2px;
+  animation: fallDown 3s linear forwards;
+}
+
+@keyframes fallDown {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(480px) rotate(720deg) scale(0.6);
+    opacity: 0;
+  }
+}

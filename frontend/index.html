@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TAYP EE — Cloud POS & Business Suite</title>
+  
+  <!-- Mobile & iOS PWA Compatibility -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TAYP EE">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#001E42">
+  <meta name="format-detection" content="telephone=no">
+  
+  <!-- Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="alternate icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slds: {
+              brand: '#0176D3',
+              brandHover: '#014486',
+              brandLight: '#EBF7FE',
+              navy: '#032D60',
+              darkNavy: '#001E42',
+              bg: '#F3F3F3',
+              card: '#FFFFFF',
+              border: '#DDDBDA',
+              borderDark: '#C9C7C5',
+              text: '#181818',
+              muted: '#706E6B',
+              success: '#2E844A',
+              warning: '#FE9339',
+              error: '#EA001E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Enterprise UI CSS -->
+  <link rel="stylesheet" href="/css/custom.css?v=2.0.4">
+
+  <!-- Immediate Session Check to prevent login screen flash on page reload -->
+  <script>
+    if (localStorage.getItem('taypee_auth_token')) {
+      document.documentElement.classList.add('auth-token-present');
+    }
+  </script>
+  <style>
+    /* Keep login gate hidden while validating valid token on reload */
+    html.auth-token-present #auth-login-gate {
+      display: none !important;
+    }
+    html.auth-token-present #app-shell {
+      display: flex !important;
+    }
+  </style>
+</head>
+<body class="bg-[#F3F3F3] text-[#181818] min-h-screen flex flex-col antialiased selection:bg-[#0176D3] selection:text-white">
+
+  <!-- ==================== FULLSCREEN 3-STEP LOGIN GATE (USERNAME -> PASSWORD -> 6-DIGIT GMAIL CODE) ==================== -->
+  <div id="auth-login-gate" class="fixed inset-0 z-[100] bg-gradient-to-br from-[#001E42] via-[#032D60] to-[#014486] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="w-full max-w-sm sm:max-w-md bg-white rounded-xl border border-[#DDDBDA] shadow-2xl overflow-hidden mx-auto my-auto">
+      <!-- Top Brand Strip -->
+      <div class="bg-[#001E42] text-white px-4 sm:px-6 py-3.5 sm:py-5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[#0176D3] flex items-center justify-center shadow-md shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-white">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+              <g transform="rotate(45 12 13.5)">
+                <line x1="8.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+                <line x1="12" y1="10.5" x2="12" y2="16.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+              </g>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 class="font-extrabold text-xs sm:text-sm tracking-wider uppercase">TAYP EE</h1>
+              <span class="bg-[#FE9339]/25 text-[#FE9339] border border-[#FE9339]/50 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">0.1.0 BETA</span>
+            </div>
+            <div class="text-[10px] sm:text-[11px] text-[#A8C7FA]">Cloud POS &amp; Business Suite</div>
+          </div>
+        </div>
+        <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-[#032D60] border border-[#1B96FF]/40 text-[9px] sm:text-[10px] font-bold text-[#A8C7FA] flex items-center gap-1 shrink-0">
+          <i data-lucide="shield-check" class="w-3 h-3 text-[#2E844A]"></i> 2FA
+        </span>
+      </div>
+
+      <!-- 3-Step Progress Stepper -->
+      <div id="auth-stepper-header" class="bg-[#F8F9FA] border-b border-[#DDDBDA] px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between text-[10px] sm:text-[11px]">
+        <div id="stepper-1" class="flex items-center gap-1 font-bold text-[#0176D3] shrink-0">
+          <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#0176D3] text-white text-[9px] sm:text-[10px] flex items-center justify-center font-bold">1</span>
+          <span><span class="hidden sm:inline">Gmail </span>User</span>
+        </div>
+        <div class="flex-1 h-px bg-[#DDDBDA] mx-1 sm:mx-2 min-w-[8px]"></div>
+        <div id="stepper-2" class="flex items-center gap-1 font-semibold text-[#706E6B] shrink-0">
+          <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#DDDBDA] text-[#3E3E3C] text-[9px] sm:text-[10px] flex items-center justify-center font-bold">2</span>
+          <span>Password</span>
+        </div>
+        <div class="flex-1 h-px bg-[#DDDBDA] mx-1 sm:mx-2 min-w-[8px]"></div>
+        <div id="stepper-3" class="flex items-center gap-1 font-semibold text-[#706E6B] shrink-0">
+          <span class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#DDDBDA] text-[#3E3E3C] text-[9px] sm:text-[10px] flex items-center justify-center font-bold">3</span>
+          <span><span class="hidden sm:inline">6-Digit </span>Code</span>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
+        <!-- Feedback Alert Box -->
+        <div id="auth-message-box" class="hidden"></div>
+
+        <!-- ==================== STEP 1: USERNAME (VERIFIED GMAIL) ==================== -->
+        <div id="auth-step-username" class="space-y-3.5">
+          <div>
+            <h2 class="text-base font-bold text-[#181818]">Step 1: Enter Username</h2>
+            <p class="text-xs text-[#706E6B] mt-0.5">Enter your registered verified Gmail username to sign in.</p>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold uppercase text-[#706E6B] block mb-1">Username (Verified Gmail)</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-2.5 text-[#706E6B]"></i>
+              <input id="auth-username-input" type="email"
+                     onkeydown="if(event.key==='Enter') AuthGate.submitStep1Username()"
+                     placeholder="yourname@gmail.com"
+                     autocomplete="username"
+                     class="w-full slds-input pl-9 pr-3 py-2 text-sm font-semibold">
+            </div>
+          </div>
+
+          <button id="auth-step1-btn" onclick="AuthGate.submitStep1Username()" class="w-full py-2.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+            <span>Next: Enter Password</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+
+          <div class="pt-2.5 flex items-center justify-between text-xs border-t border-[#F3F3F3]">
+            <a href="/repass" target="_blank" class="text-[#0176D3] hover:underline font-semibold flex items-center gap-1" title="Open password reset portal in a new tab">
+              <i data-lucide="key" class="w-3.5 h-3.5"></i>
+              <span>Forgot Password?</span>
+            </a>
+            <a href="/register" target="_blank" class="text-[#2E844A] hover:underline font-bold flex items-center gap-1" title="Register new staff account in a new tab">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span>Register Staff</span>
+            </a>
+          </div>
+          <div class="pt-2 text-center text-xs">
+            <a href="/appointment" target="_blank" class="text-[#DD7A00] hover:underline font-bold inline-flex items-center gap-1">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              <span>Client Appointment Booking ➔</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 2: PASSWORD ==================== -->
+        <div id="auth-step-password" class="hidden space-y-3.5">
+          <div>
+            <h2 class="text-base font-bold text-[#181818]">Step 2: Enter Password</h2>
+            <p class="text-xs text-[#706E6B] mt-0.5">Verify your account password to receive your 6-digit Gmail code.</p>
+          </div>
+
+          <div class="p-2.5 rounded bg-[#F8F9FA] border border-[#DDDBDA] flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <div id="auth-user-chip-avatar" class="w-7 h-7 rounded-full bg-[#0176D3] text-white font-bold text-[11px] flex items-center justify-center shrink-0">AD</div>
+              <div class="min-w-0">
+                <div class="font-bold text-[#181818] truncate flex items-center gap-1.5">
+                  <span id="auth-user-chip-name">Admin</span>
+                  <span id="auth-user-chip-role" class="px-1.5 py-0.2 rounded text-[9px] uppercase font-bold bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC]">admin</span>
+                </div>
+                <div id="auth-user-chip-email" class="text-[11px] font-mono text-[#706E6B] truncate"></div>
+              </div>
+            </div>
+            <button onclick="AuthGate.goToStep(1)" class="text-[#0176D3] hover:underline font-bold text-[11px] shrink-0 ml-2">Change</button>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold uppercase text-[#706E6B] block mb-1">Account Password</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-2.5 text-[#706E6B]"></i>
+              <input id="auth-password-input" type="password"
+                     onkeydown="if(event.key==='Enter') AuthGate.submitStep2Password()"
+                     placeholder="Enter your password"
+                     autocomplete="current-password"
+                     class="w-full slds-input pl-9 pr-10 py-2 text-sm font-semibold">
+              <button type="button" onclick="AuthGate.togglePasswordVisibility()" class="absolute right-2.5 top-2 text-[#706E6B] hover:text-[#181818] p-0.5" title="Show / Hide Password">
+                <i id="auth-pass-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <button id="auth-step2-btn" onclick="AuthGate.submitStep2Password()" class="w-full py-2.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Verify Password &amp; Send Code</span>
+          </button>
+
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <button type="button" onclick="AuthGate.goToStep(1)" class="text-[#706E6B] hover:text-[#181818] font-semibold flex items-center gap-1">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back
+            </button>
+            <a href="/repass" target="_blank" class="text-[#0176D3] hover:underline font-semibold flex items-center gap-1" title="Open password reset in a new tab">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Forgot Password?
+            </a>
+          </div>
+        </div>
+
+        <!-- ==================== STEP 3: 6-DIGIT GMAIL CODE ==================== -->
+        <div id="auth-step-otp" class="hidden space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-[#181818]">Step 3: 6-Digit Gmail Verification</h2>
+            <p class="text-xs text-[#706E6B] mt-0.5">Enter the 6-digit security code sent to your verified Gmail inbox.</p>
+          </div>
+
+          <div class="p-2.5 rounded bg-[#F8F9FA] border border-[#DDDBDA] flex items-center justify-between text-xs">
+            <div class="truncate">
+              <span class="text-[#706E6B]">Code sent to:</span>
+              <strong id="auth-target-email" class="text-[#181818] font-mono ml-1"></strong>
+            </div>
+            <button onclick="AuthGate.goToStep(1)" class="text-[#0176D3] hover:underline font-bold text-[11px] shrink-0 ml-2">Start Over</button>
+          </div>
+
+
+          <!-- OTP Input Form with Custom Element <otp-input> (Strictly 1 digit per box) -->
+          <form id="auth-otp-form" onsubmit="event.preventDefault(); AuthGate.submitStep3Otp();" class="space-y-4">
+            <div>
+              <label for="auth-otp-input" class="text-[11px] font-bold uppercase text-[#706E6B] block mb-2 text-center">
+                Enter 6-Digit Code (1 Digit Per Box)
+              </label>
+
+              <otp-input id="auth-otp-component" class="block relative w-full select-none cursor-pointer">
+                <input type="text"
+                  id="auth-otp-input"
+                  name="otp"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  pattern="\d{6}"
+                  required
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 text-transparent bg-transparent border-0 outline-none select-none"
+                  aria-label="6-digit verification code">
+              </otp-input>
+            </div>
+
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-[#706E6B]">Expires in <strong id="auth-otp-countdown" class="font-mono text-[#181818]">05:00</strong></span>
+              <button type="button" id="auth-resend-btn" onclick="AuthGate.resendOtp()" disabled class="text-xs font-semibold text-[#706E6B]">Resend Code (30s)</button>
+            </div>
+
+            <button type="submit" id="auth-verify-otp-btn" class="w-full py-2.5 rounded bg-[#2E844A] hover:bg-[#226438] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              <span>Verify Code &amp; Complete Login</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="bg-[#F8F9FA] border-t border-[#DDDBDA] px-4 py-2.5 text-[10px] sm:text-[11px] text-[#706E6B] flex items-center justify-between">
+        <span>TAYP EE Enterprise Security</span>
+        <span class="font-mono bg-[#EAEAEA] text-[#3E3E3C] px-1.5 py-0.5 rounded text-[9px] font-bold">v0.1.0 BETA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN PROTECTED WEBAPP SHELL (HIDDEN UNTIL GMAIL VERIFIED) ==================== -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col">
+
+  <!-- TOP 2:45 PM PRE-MAINTENANCE BANNER -->
+  <div id="maintenance-warning-banner" class="hidden bg-[#FFF4E8] text-[#8C4B00] border-b border-[#FE9339] px-4 py-2 font-bold text-xs flex items-center justify-between shadow-sm sticky top-0 z-50">
+    <div class="flex items-center gap-2">
+      <i data-lucide="alert-triangle" class="w-4 h-4 text-[#FE9339]"></i>
+      <span><strong>Scheduled Maintenance Notice:</strong> Daily 3:00 PM (15:00) System Maintenance begins in <span id="maintenance-warning-time" class="underline">15 minutes</span>. Please finalize open customer checkouts.</span>
+    </div>
+    <div class="text-[11px] text-[#8C4B00]/80">Automated Cloud & Server Data Snapshot Scheduled</div>
+  </div>
+
+  <!-- GLOBAL HEADER (Top Navy Bar) -->
+  <header class="h-12 bg-[#001E42] text-white px-2 sm:px-4 flex items-center justify-between sticky top-0 z-40 shadow-md">
+    <!-- Left: Waffle Icon + Cloud Branding -->
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div onclick="App.toggleAppLauncher()" class="slds-waffle cursor-pointer hover:opacity-90 p-1.5 rounded hover:bg-[#032D60] transition-all active:scale-95" title="App Launcher">
+        <div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div>
+        <div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div>
+        <div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div><div class="slds-waffle-dot"></div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <div class="w-7 h-7 rounded bg-[#0176D3] flex items-center justify-center font-black text-white text-xs shadow-sm shrink-0" title="TAYP EE Cloud POS">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-white">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+            <g transform="rotate(45 12 13.5)">
+              <line x1="8.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+              <line x1="12" y1="10.5" x2="12" y2="16.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+            </g>
+          </svg>
+        </div>
+        <div class="leading-tight">
+          <div class="flex items-center gap-1.5">
+            <h1 id="header-store-name" class="font-extrabold text-xs tracking-wider text-white uppercase">TAYP EE</h1>
+            <span class="bg-[#FE9339]/25 text-[#FE9339] border border-[#FE9339]/50 text-[9px] font-black px-1.5 py-0.2 rounded uppercase tracking-wider shrink-0">0.1.0 BETA</span>
+          </div>
+          <div class="text-[10px] text-[#A8C7FA] hidden sm:block">Cloud POS Suite</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Live Global Search -->
+    <div id="global-search-wrapper" class="flex items-center flex-1 max-w-xs sm:max-w-md mx-1 sm:mx-4 relative">
+      <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B] pointer-events-none"></i>
+      <input id="global-search-input" type="text"
+             oninput="App.handleGlobalSearch(this.value)"
+             onfocus="if(this.value.trim()) App.handleGlobalSearch(this.value)"
+             placeholder="Search items, bills, staff..."
+             autocomplete="off"
+             class="w-full bg-[#FFFFFF] text-[#181818] rounded-full pl-8 pr-8 py-1 text-xs border border-transparent focus:border-[#0176D3] focus:outline-none placeholder-[#706E6B] shadow-inner">
+      <button id="global-search-clear" onclick="App.clearGlobalSearch()" class="hidden absolute right-2.5 text-[#706E6B] hover:text-[#181818] text-xs font-bold" title="Clear Search">✕</button>
+
+      <!-- Live Global Search Dropdown -->
+      <div id="global-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-[#DDDBDA] rounded-lg shadow-2xl z-50 max-h-[75vh] overflow-y-auto text-[#181818]">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Right: Utility Controls & Profile -->
+    <div class="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
+      <!-- Cloud Connection Pill -->
+      <div id="cloud-status-badge" onclick="App.switchTab('settings')" class="px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-[#032D60] text-[#A8C7FA] border border-[#1B96FF]/40 flex items-center cursor-pointer hover:border-[#1B96FF] transition-all shrink-0" title="Cloud Database Status">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#FE9339] mr-1 sm:mr-1.5"></span>
+        <span class="hidden sm:inline">Cloud: </span><span>Ready</span>
+      </div>
+
+      <!-- Local ZIP Download Button -->
+      <a href="/api/system/download-backup-zip" download class="hidden md:flex px-2.5 py-1 rounded bg-[#0176D3] hover:bg-[#014486] text-white text-[11px] font-semibold items-center gap-1.5 transition-all shadow-sm" title="Download Full Cloud/Server Data as ZIP">
+        <i data-lucide="download" class="w-3 h-3"></i>
+        <span>Data ZIP</span>
+      </a>
+
+      <!-- 3:00 PM Maintenance Badge -->
+      <div id="maintenance-countdown-badge" class="hidden lg:flex px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-[#032D60] text-slate-200 border border-slate-700 items-center">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#2E844A] mr-1.5"></span>
+        3:00 PM Maint.
+      </div>
+
+      <!-- Clock -->
+      <div class="hidden sm:flex px-2.5 py-0.5 bg-[#032D60] border border-slate-700 rounded font-mono text-[11px] text-[#A8C7FA] font-semibold items-center gap-1">
+        <i data-lucide="clock" class="w-3 h-3 text-[#A8C7FA]"></i>
+        <span id="live-clock">--:--:--</span>
+      </div>
+
+      <!-- Refresh Cloud Data -->
+      <button onclick="App.refreshAllData()" class="p-1.5 rounded hover:bg-[#032D60] text-[#A8C7FA] hover:text-white transition-colors" title="Refresh Live Data">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <!-- Setup Gear -->
+      <button onclick="App.switchTab('settings')" class="p-1.5 rounded hover:bg-[#032D60] text-[#A8C7FA] hover:text-white transition-colors" title="Setup / Settings">
+        <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <!-- Signed-in User Avatar & Logout -->
+      <div class="flex items-center gap-1.5 pl-1 border-l border-slate-700">
+        <div id="header-user-avatar" class="w-7 h-7 rounded-full bg-[#0176D3] text-white font-bold flex items-center justify-center text-[11px] border border-white/40" title="Signed in User">
+          AD
+        </div>
+        <span id="header-user-email" class="hidden xl:inline text-[10px] text-[#A8C7FA] max-w-[130px] truncate"></span>
+        <button onclick="AuthGate.logout()" class="p-1.5 rounded hover:bg-[#EA001E]/20 text-[#A8C7FA] hover:text-[#FF8A8A] transition-colors" title="Sign Out / Logout">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION BAR (Horizontal Tabs) -->
+  <nav class="bg-white border-b border-[#DDDBDA] px-2 sm:px-4 flex items-center gap-1 overflow-x-auto shadow-sm select-none no-scrollbar">
+    <button id="nav-btn-pos" onclick="App.switchTab('pos')" class="flex items-center gap-2 px-4 py-3 text-xs font-bold text-[#0176D3] border-b-2 border-[#0176D3] bg-[#F3F3F3] transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+      <span>POS Terminal</span>
+      <span class="text-[10px] font-mono px-1 py-0.2 rounded bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC] hidden sm:inline">F2</span>
+    </button>
+
+    <button id="nav-btn-dashboard" onclick="App.switchTab('dashboard')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+      <span>Dashboard</span>
+    </button>
+
+    <button id="nav-btn-customers" onclick="App.switchTab('customers')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="users" class="w-3.5 h-3.5"></i>
+      <span>Customers</span>
+    </button>
+
+    <button id="nav-btn-inventory" onclick="App.switchTab('inventory')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
+      <span>Inventory</span>
+    </button>
+
+    <button id="nav-btn-staff" onclick="App.switchTab('staff')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+      <span>Staff</span>
+    </button>
+
+    <button id="nav-btn-expenses" onclick="App.switchTab('expenses')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+      <span>Expenses</span>
+    </button>
+
+    <button id="nav-btn-appointments" onclick="App.switchTab('appointments')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+      <span>Appointments</span>
+    </button>
+
+    <button id="nav-btn-maintenance" onclick="App.switchTab('maintenance')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#FE9339] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer">
+      <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#FE9339]"></i>
+      <span>3:00 PM Maintenance</span>
+    </button>
+
+    <button id="nav-btn-settings" onclick="App.switchTab('settings')" class="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] hover:bg-[#F9F9FA] border-b-2 border-transparent transition-all whitespace-nowrap cursor-pointer ml-auto">
+      <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+      <span>Setup</span>
+    </button>
+  </nav>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-2 sm:p-3 bg-[#F3F3F3] pb-16 lg:pb-3">
+
+    <!-- ==================== VIEW 1: POS BILLING TERMINAL ==================== -->
+    <section id="view-pos" class="flex-1 flex flex-col lg:flex-row gap-2.5 sm:gap-3 overflow-y-auto lg:overflow-hidden relative">
+
+      <!-- Mobile View Switcher (Catalog vs Cart) - Mobile Only -->
+      <div id="pos-mobile-subnav" class="flex lg:hidden items-center justify-between bg-white border border-[#DDDBDA] rounded p-1 shadow-sm shrink-0">
+        <button id="pos-mob-view-catalog-btn" onclick="POS.switchMobileView('catalog')" 
+                class="flex-1 py-1.5 px-3 rounded text-xs font-bold bg-[#0176D3] text-white flex items-center justify-center gap-1.5 transition-all shadow-sm">
+          <i data-lucide="package" class="w-3.5 h-3.5"></i>
+          <span>Catalog</span>
+          <span id="pos-mob-catalog-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-white/20 text-white font-mono">11</span>
+        </button>
+        <button id="pos-mob-view-cart-btn" onclick="POS.switchMobileView('cart')" 
+                class="flex-1 py-1.5 px-3 rounded text-xs font-semibold text-[#3E3E3C] hover:text-[#0176D3] flex items-center justify-center gap-1.5 transition-all">
+          <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
+          <span>Order Cart</span>
+          <span id="pos-mob-cart-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC] font-mono">0</span>
+        </button>
+      </div>
+
+      <!-- Left: Products Catalog & Search -->
+      <div id="pos-catalog-panel" class="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden bg-white border border-[#DDDBDA] rounded p-3 sm:p-4 shadow-sm">
+        
+        <!-- Highlights Panel: Customer Direct Entry -->
+        <div class="bg-[#F8F9FA] border border-[#DDDBDA] rounded p-3 mb-3 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 font-bold text-[#181818]">
+              <div class="w-6 h-6 rounded bg-[#0176D3] text-white flex items-center justify-center text-xs">
+                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+              </div>
+              <span>Customer Account (Billing Entry)</span>
+            </div>
+            <div id="pos-cust-status-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F3F3F3] text-[#706E6B] border border-[#DDDBDA]">
+              Walk-in Guest
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+            <!-- Phone Input -->
+            <div class="md:col-span-5">
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block mb-0.5">Mobile Phone (Lookup / New)</label>
+              <div class="relative">
+                <i data-lucide="phone" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#706E6B]"></i>
+                <input id="pos-inline-phone" type="tel" maxlength="10" 
+                       oninput="POS.handleInlinePhoneInput(this.value)" 
+                       placeholder="9876543210" 
+                       class="w-full slds-input pl-8 pr-3 py-1 text-xs font-mono font-bold">
+              </div>
+            </div>
+
+            <!-- Name Input -->
+            <div class="md:col-span-5">
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block mb-0.5">Customer Name</label>
+              <div class="relative">
+                <i data-lucide="user-check" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#706E6B]"></i>
+                <input id="pos-inline-name" type="text" 
+                       oninput="POS.handleInlineNameInput(this.value)" 
+                       placeholder="Full Name (e.g. Rahul Sharma)" 
+                       class="w-full slds-input pl-8 pr-3 py-1 text-xs font-semibold">
+              </div>
+            </div>
+
+            <!-- Action Button -->
+            <div class="md:col-span-2 flex flex-col justify-end">
+              <div class="flex items-center gap-1">
+                <button id="pos-inline-add-btn" onclick="POS.quickSaveInlineCustomer()" 
+                        class="flex-1 py-1 px-2.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition-all" title="Tag / Save Customer">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>Add</span>
+                </button>
+                <button id="pos-inline-clear-btn" onclick="POS.clearCustomer()" 
+                        class="hidden py-1 px-2 rounded bg-white hover:bg-[#F3F3F3] text-[#706E6B] hover:text-[#EA001E] border border-[#DDDBDA] text-xs transition-all" title="Reset to Walk-in">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Insights Bar -->
+          <div id="pos-customer-insights" class="hidden pt-1.5 border-t border-[#DDDBDA] flex items-center justify-between text-xs">
+            <div class="flex items-center gap-3 font-mono">
+              <span class="text-[#DD7A00]">Points: <strong id="pos-insight-points">0</strong></span>
+              <span class="text-[#2E844A]">Wallet: <strong id="pos-insight-wallet">₹0.00</strong></span>
+              <span class="text-[#EA001E]">Khata: <strong id="pos-insight-khata">₹0.00</strong></span>
+            </div>
+            <div id="pos-insight-tier" class="px-2 py-0.5 rounded-full font-bold text-[10px] bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC]">
+              Regular
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart Search Bar, Type Filter, Sort & Quick Actions -->
+        <div class="space-y-2 mb-3">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#706E6B]"></i>
+              <input id="pos-search-input" type="text"
+                     oninput="POS.searchQuery = this.value; App.renderPOSProductsGrid();"
+                     onkeydown="App.handlePOSSearchKeydown(event)"
+                     placeholder="Search item, category, barcode — Press Enter to quick add (F2)..."
+                     class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <select id="pos-sort-select" onchange="App.posSortBy = this.value; App.renderPOSProductsGrid();" class="slds-input px-2 py-1.5 text-[11px] font-semibold text-[#3E3E3C]" title="Sort Products">
+                <option value="default">Sort: Default</option>
+                <option value="price-asc">Price: Low → High</option>
+                <option value="price-desc">Price: High → Low</option>
+                <option value="name-asc">Name: A → Z</option>
+              </select>
+
+              <button onclick="App.openCustomItemModal()" class="px-2.5 py-1.5 rounded bg-[#FFF4E8] hover:bg-[#FE9339] text-[#8C4B00] hover:text-white border border-[#FFD599] font-bold text-[11px] flex items-center gap-1 transition-all whitespace-nowrap" title="Add 1-time custom service or charge to bill">
+                <i data-lucide="zap" class="w-3 h-3"></i> Custom
+              </button>
+
+              <button onclick="App.openAddProductModal()" class="px-2.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all whitespace-nowrap" title="Add New Product or Service to Catalog">
+                <i data-lucide="plus" class="w-3 h-3"></i> New Item
+              </button>
+            </div>
+          </div>
+
+          <!-- Type Switcher + Category Pills + Live Item Count -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1">
+              <!-- Type Filter Pills -->
+              <div class="flex items-center bg-[#F3F3F3] p-0.5 rounded-full border border-[#DDDBDA] shrink-0 mr-1">
+                <button id="pos-type-all" onclick="App.filterPOSType('all')" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0176D3] text-white transition-all">All</button>
+                <button id="pos-type-service" onclick="App.filterPOSType('service')" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Services</button>
+                <button id="pos-type-product" onclick="App.filterPOSType('product')" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Products</button>
+              </div>
+              <div id="pos-categories-container" class="flex gap-1.5">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+            <span id="pos-products-count-badge" class="text-[10px] font-mono font-bold text-[#706E6B] bg-[#F3F3F3] px-2 py-0.5 rounded border border-[#DDDBDA] shrink-0">0 items</span>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="pos-products-grid" class="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 pr-1">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Right: Cart & Checkout (Order Card) -->
+      <div id="pos-cart-panel" class="hidden lg:flex w-full lg:w-80 flex-col bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm justify-between select-none shrink-0">
+        <div>
+          <!-- Mobile Only Return to Catalog -->
+          <div class="flex lg:hidden items-center justify-between pb-2 mb-2 border-b border-[#DDDBDA]">
+            <button onclick="POS.switchMobileView('catalog')" class="py-1 px-2.5 rounded bg-[#EBF7FE] hover:bg-[#C5E8FC] text-[#0176D3] font-bold text-xs flex items-center gap-1.5 transition-all">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+              <span>+ Add More Items</span>
+            </button>
+            <button onclick="POS.clearCart()" class="text-xs text-[#706E6B] hover:text-[#EA001E] transition-colors" title="Clear Cart">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 inline"></i> Clear
+            </button>
+          </div>
+
+          <!-- Cart Header -->
+          <div class="flex items-center justify-between pb-2.5 border-b border-[#DDDBDA]">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded bg-[#0176D3] text-white flex items-center justify-center text-xs">
+                <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
+              </div>
+              <h3 class="font-bold text-xs text-[#181818] uppercase tracking-wide">Current Order</h3>
+              <span id="pos-item-count-badge" class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-[#F3F3F3] text-[#0176D3] border border-[#DDDBDA] font-mono">0 items</span>
+            </div>
+            <button onclick="POS.clearCart()" class="hidden lg:inline text-xs text-[#706E6B] hover:text-[#EA001E] transition-colors" title="Clear Cart (ESC)">
+              <i data-lucide="rotate-ccw" class="w-3 h-3 inline"></i> Clear
+            </button>
+          </div>
+
+          <!-- Items List -->
+          <div id="pos-cart-items" class="mt-2.5 max-h-[46vh] overflow-y-auto pr-1">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div id="pos-cart-empty" class="py-16 text-center text-[#706E6B]">
+            <i data-lucide="shopping-bag" class="w-8 h-8 mx-auto stroke-1 mb-2 text-[#C9C7C5]"></i>
+            <div class="text-xs">Cart is empty. Click an item to add.</div>
+          </div>
+        </div>
+
+        <!-- Totals & Payment -->
+        <div class="pt-3 border-t border-[#DDDBDA] space-y-1.5 text-xs">
+          <div class="flex justify-between text-[#706E6B]">
+            <span>Subtotal:</span>
+            <span id="pos-subtotal" class="font-mono font-semibold text-[#181818]">₹0.00</span>
+          </div>
+
+          <div class="flex justify-between items-center text-[#706E6B]">
+            <div class="flex items-center gap-1">
+              <span>Discount:</span>
+              <button onclick="App.openDiscountModal()" class="text-[11px] text-[#0176D3] hover:underline font-semibold">(Edit)</button>
+            </div>
+            <span id="pos-discount" class="font-mono text-[#2E844A] font-semibold">- ₹0.00</span>
+          </div>
+
+          <div class="flex justify-between items-center text-[#706E6B]">
+            <div class="flex items-center gap-1">
+              <span>GST (Tax):</span>
+              <input type="checkbox" id="tax-toggle-check" checked onchange="POS.taxEnabled = this.checked; POS.renderCart();" class="rounded text-[#0176D3] focus:ring-0">
+            </div>
+            <span id="pos-tax" class="font-mono text-[#181818]">+ ₹0.00</span>
+          </div>
+
+          <div class="pt-2 border-t border-[#DDDBDA] flex justify-between items-baseline">
+            <span class="font-bold text-xs uppercase text-[#181818]">Total Due:</span>
+            <span id="pos-grand-total" class="font-black text-xl font-mono text-[#0176D3]">₹0.00</span>
+          </div>
+
+          <!-- Quick Action Pay Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            <button onclick="POS.openCheckoutModal('Cash')" class="py-2.5 rounded bg-white hover:bg-[#F3F3F3] text-[#181818] border border-[#DDDBDA] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm">
+              <i data-lucide="banknote" class="w-3.5 h-3.5 text-[#2E844A]"></i>
+              <span>Cash (F4)</span>
+            </button>
+
+            <button onclick="POS.openCheckoutModal('UPI')" class="py-2.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
+              <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+              <span>UPI QR (F8)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Floating Sticky Cart Bar (Shown in catalog when items exist) -->
+      <div id="pos-mobile-floating-cart" onclick="POS.switchMobileView('cart')" 
+           class="hidden lg:hidden fixed bottom-14 left-2.5 right-2.5 sm:left-4 sm:right-4 z-30 bg-[#001E42] text-white rounded-xl p-2.5 sm:p-3 shadow-2xl border border-[#0176D3] flex items-center justify-between cursor-pointer active:scale-95 transition-all">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#0176D3] flex items-center justify-center font-bold text-xs text-white shadow-sm">
+            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div id="pos-floating-items" class="text-xs font-bold">0 Items Selected</div>
+            <div class="text-[10px] text-[#A8C7FA]">Tap to review & checkout</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div id="pos-floating-total" class="font-mono font-black text-sm text-[#34D399]">₹0.00</div>
+          <div class="py-1 px-3 rounded-lg bg-[#0176D3] text-white font-bold text-xs flex items-center gap-1 shadow-sm">
+            <span>Checkout</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: DASHBOARD ==================== -->
+    <section id="view-dashboard" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#2E844A] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Analytics & Revenue Cloud</h2>
+            <p class="text-xs text-[#706E6B]">Live sales telemetry, drawer reconciliation & store performance metrics</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="App.switchTab('pos')" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+            <span>New POS Bill (F2)</span>
+          </button>
+          <button onclick="App.openEODReportModal()" class="px-3.5 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#181818] border border-[#DDDBDA] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#0176D3]"></i>
+            <span>Day Settlement (EOD)</span>
+          </button>
+          <button onclick="App.loadDashboardStats()" class="p-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#706E6B] border border-[#DDDBDA] transition-all" title="Refresh Live Metrics">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold uppercase text-[#706E6B]">Today's Sales</span>
+            <span class="text-[10px] font-bold text-[#2E844A] bg-[#EBF5EE] px-1.5 py-0.2 rounded border border-[#A3D9B5]">Live</span>
+          </div>
+          <div id="dash-today-sales" class="text-xl font-black font-mono text-[#2E844A]">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="trending-up" class="w-3 h-3 text-[#2E844A]"></i> Gross Counter Revenue
+          </div>
+        </div>
+
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold uppercase text-[#706E6B]">Today's Net Profit</span>
+            <span class="text-[10px] font-bold text-[#0176D3] bg-[#EBF7FE] px-1.5 py-0.2 rounded border border-[#C5E8FC]">Net</span>
+          </div>
+          <div id="dash-today-profit" class="text-xl font-black font-mono text-[#0176D3]">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="shield-check" class="w-3 h-3 text-[#0176D3]"></i> Sales Less Expenses
+          </div>
+        </div>
+
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B] mb-1">Bills Generated</div>
+          <div id="dash-today-bills" class="text-xl font-black font-mono text-[#181818]">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="receipt" class="w-3 h-3 text-[#706E6B]"></i> Invoices Settled Today
+          </div>
+        </div>
+
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B] mb-1">Month-to-Date</div>
+          <div id="dash-month-sales" class="text-xl font-black font-mono text-[#0176D3]">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3 h-3 text-[#0176D3]"></i> Cumulative Revenue
+          </div>
+        </div>
+
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold uppercase text-[#706E6B]">Low Stock</span>
+            <span id="dash-low-stock-pill" class="text-[10px] font-bold text-[#EA001E] bg-[#FFF1F0] px-1.5 py-0.2 rounded border border-[#FFCCC7]">Alerts</span>
+          </div>
+          <div id="dash-low-stock" class="text-xl font-black font-mono text-[#EA001E]">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="alert-triangle" class="w-3 h-3 text-[#EA001E]"></i> Items Below Threshold
+          </div>
+        </div>
+
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm slds-card-hover">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B] mb-1">Appointments</div>
+          <div id="dash-appointments" class="text-xl font-black font-mono text-[#DD7A00]">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-1 flex items-center gap-1">
+            <i data-lucide="clock" class="w-3 h-3 text-[#DD7A00]"></i> Client Bookings Today
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Breakdown Cards (2 columns) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Payment Mode Progress Bars -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-[#F3F3F3]">
+            <h3 class="font-bold text-xs uppercase text-[#706E6B] flex items-center gap-1.5">
+              <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-[#0176D3]"></i>
+              Collections by Payment Channel
+            </h3>
+            <div class="flex items-center bg-[#F3F3F3] p-0.5 rounded border border-[#DDDBDA] text-[10px]">
+              <button onclick="App.setDashboardAnalyticsPeriod('today')" class="dash-period-btn dash-period-today px-2 py-0.5 rounded font-bold bg-[#0176D3] text-white transition-all">Today</button>
+              <button onclick="App.setDashboardAnalyticsPeriod('month')" class="dash-period-btn dash-period-month px-2 py-0.5 rounded font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Month</button>
+              <button onclick="App.setDashboardAnalyticsPeriod('all')" class="dash-period-btn dash-period-all px-2 py-0.5 rounded font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">All</button>
+            </div>
+          </div>
+          <div id="dash-payment-breakdown-container" class="space-y-2.5">
+            <!-- Dynamically populated with progress bars -->
+          </div>
+        </div>
+
+        <!-- Top Performing Stylists & Staff -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-[#F3F3F3]">
+            <h3 class="font-bold text-xs uppercase text-[#706E6B] flex items-center gap-1.5">
+              <i data-lucide="award" class="w-3.5 h-3.5 text-[#DD7A00]"></i>
+              Top Stylists & Service Leaders
+            </h3>
+            <div class="flex items-center bg-[#F3F3F3] p-0.5 rounded border border-[#DDDBDA] text-[10px]">
+              <button onclick="App.setDashboardAnalyticsPeriod('today')" class="dash-period-btn dash-period-today px-2 py-0.5 rounded font-bold bg-[#0176D3] text-white transition-all">Today</button>
+              <button onclick="App.setDashboardAnalyticsPeriod('month')" class="dash-period-btn dash-period-month px-2 py-0.5 rounded font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Month</button>
+              <button onclick="App.setDashboardAnalyticsPeriod('all')" class="dash-period-btn dash-period-all px-2 py-0.5 rounded font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">All</button>
+            </div>
+          </div>
+          <div id="dash-top-staff-container" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Bills Table Card -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <h3 class="font-bold text-xs uppercase text-[#706E6B] flex items-center gap-1.5">
+            <i data-lucide="receipt" class="w-3.5 h-3.5 text-[#0176D3]"></i>
+            Recent Transactions (Live Feed)
+          </h3>
+          <div class="flex items-center gap-2">
+            <div class="relative w-56">
+              <i data-lucide="search" class="w-3 h-3 absolute left-2.5 top-2 text-[#706E6B]"></i>
+              <input id="dash-bills-search" type="text" oninput="App.filterDashboardBills()" placeholder="Search invoice, customer, mode..." class="w-full slds-input pl-7 pr-2.5 py-1 text-xs">
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                <th class="py-2.5 px-4">Invoice No</th>
+                <th class="py-2.5 px-4">Time</th>
+                <th class="py-2.5 px-4">Customer</th>
+                <th class="py-2.5 px-4">Payment</th>
+                <th class="py-2.5 px-4">Total</th>
+                <th class="py-2.5 px-4 text-right">Reprint</th>
+              </tr>
+            </thead>
+            <tbody id="dash-recent-bills-table">
+              <!-- Dynamically loaded -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: CUSTOMERS & CRM ==================== -->
+    <section id="view-customers" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#0176D3] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Customer Accounts & Cloud CRM</h2>
+            <p class="text-xs text-[#706E6B]">Accounts directory, client loyalty points, prepaid wallets & khata ledgers</p>
+          </div>
+        </div>
+        <button onclick="App.openAddCustomerModal()" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add New Customer
+        </button>
+      </div>
+
+      <!-- Account Metric Banner (4 SLDS Summary Tiles) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Total Registered Accounts</div>
+          <div id="cust-stat-total" class="text-xl font-black font-mono text-[#0176D3] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Active Customer Base</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Loyalty Points Pool</div>
+          <div id="cust-stat-points" class="text-xl font-black font-mono text-[#DD7A00] mt-0.5">0 pts</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Rewards in Circulation</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Prepaid Wallet Balances</div>
+          <div id="cust-stat-wallet" class="text-xl font-black font-mono text-[#2E844A] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Customer Advance Funds</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Outstanding Khata Dues</div>
+          <div id="cust-stat-khata" class="text-xl font-black font-mono text-[#EA001E] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Pending Credit Receivables</div>
+        </div>
+      </div>
+
+      <!-- Search & Tier Filter Toolbar (SLDS Card) -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full md:w-80 relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B]"></i>
+          <input id="customers-search-input" type="text" oninput="App.filterCustomers()" placeholder="Search accounts by name or phone..." class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+          <span class="text-[11px] font-bold uppercase text-[#706E6B] mr-1 hidden sm:inline">Tier:</span>
+          <button id="cust-tier-filter-All" onclick="App.filterCustomerTier('All')" class="px-2.5 py-1 rounded text-xs font-bold bg-[#0176D3] text-white transition-all">All</button>
+          <button id="cust-tier-filter-Regular" onclick="App.filterCustomerTier('Regular')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Regular</button>
+          <button id="cust-tier-filter-Silver" onclick="App.filterCustomerTier('Silver')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Silver</button>
+          <button id="cust-tier-filter-Gold" onclick="App.filterCustomerTier('Gold')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Gold</button>
+          <button id="cust-tier-filter-Platinum" onclick="App.filterCustomerTier('Platinum VIP')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Platinum VIP</button>
+        </div>
+      </div>
+
+      <!-- SLDS Accounts Table -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                <th class="py-2.5 px-4">Account Name</th>
+                <th class="py-2.5 px-4">Phone</th>
+                <th class="py-2.5 px-4">Tier</th>
+                <th class="py-2.5 px-4">Loyalty Points</th>
+                <th class="py-2.5 px-4">Wallet Balance</th>
+                <th class="py-2.5 px-4">Pending Khata</th>
+                <th class="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: INVENTORY ==================== -->
+    <section id="view-inventory" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#0176D3] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="boxes" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Inventory & Price Book Management</h2>
+            <p class="text-xs text-[#706E6B]">Stock levels, retail prices, service catalog & low-inventory alerts</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="App.openAddProductModal()" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Product / Service
+          </button>
+          <button onclick="window.print()" class="px-3 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] font-semibold text-xs flex items-center gap-1.5 transition-all">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Catalog
+          </button>
+        </div>
+      </div>
+
+      <!-- Catalog Metric Banner -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Total Catalog Items</div>
+          <div id="inv-stat-total" class="text-xl font-black font-mono text-[#0176D3] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Services & Physical Products</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Physical Stock Value</div>
+          <div id="inv-stat-value" class="text-xl font-black font-mono text-[#2E844A] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">At Current Selling Value</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Low Stock Warnings</div>
+          <div id="inv-stat-low" class="text-xl font-black font-mono text-[#EA001E] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Items Requiring Reorder</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Salon Services</div>
+          <div id="inv-stat-services" class="text-xl font-black font-mono text-[#DD7A00] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Standard Treatment Menu</div>
+        </div>
+      </div>
+
+      <!-- Search & Category Filter Toolbar -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-3 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-3">
+        <!-- Sub-view Switcher: Stock vs All Price Book -->
+        <div class="flex items-center gap-1.5 w-full lg:w-auto">
+          <button id="inv-subtab-stock" onclick="App.switchInventorySubTab('stock')" class="px-3 py-1.5 rounded text-xs font-bold bg-[#0176D3] text-white transition-all whitespace-nowrap">
+            Physical Stock
+          </button>
+          <button id="inv-subtab-catalog" onclick="App.switchInventorySubTab('catalog')" class="px-3 py-1.5 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all whitespace-nowrap">
+            All Services & Price Book
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 w-full lg:w-72 relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B]"></i>
+          <input id="inventory-search-input" type="text" oninput="App.filterInventory()" placeholder="Search item by name, SKU or barcode..." class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+        </div>
+        <div class="flex items-center gap-3 w-full lg:w-auto">
+          <select id="inventory-cat-filter" onchange="App.filterInventory()" class="slds-input px-3 py-1.5 text-xs text-[#181818]">
+            <option value="All">All Categories</option>
+          </select>
+          <label id="inventory-low-stock-label" class="flex items-center gap-1.5 text-xs font-semibold text-[#181818] cursor-pointer whitespace-nowrap">
+            <input id="inventory-low-stock-toggle" type="checkbox" onchange="App.filterInventory()" class="rounded text-[#0176D3]">
+            <span>Low Stock Only</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Physical Stock Table -->
+      <div id="inventory-stock-card" class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                <th class="py-2.5 px-4">Product Name</th>
+                <th class="py-2.5 px-4">SKU / ID</th>
+                <th class="py-2.5 px-4">Stock Status</th>
+                <th class="py-2.5 px-4">Alert Limit</th>
+                <th class="py-2.5 px-4">Cost / Selling</th>
+                <th class="py-2.5 px-4">Supplier</th>
+                <th class="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All Products & Services Price Book Table -->
+      <div id="inventory-catalog-card" class="hidden bg-white border border-[#DDDBDA] rounded p-4 shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                <th class="py-2.5 px-4">Item Name</th>
+                <th class="py-2.5 px-4">Category & Type</th>
+                <th class="py-2.5 px-4">Barcode / SKU</th>
+                <th class="py-2.5 px-4">Duration</th>
+                <th class="py-2.5 px-4">Cost / Selling</th>
+                <th class="py-2.5 px-4">Comm. %</th>
+                <th class="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="catalog-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 5: STAFF ==================== -->
+    <section id="view-staff" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#0176D3] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="user-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Staff Directory & Service Cloud Commissions</h2>
+            <p class="text-xs text-[#706E6B]">Employee service performance, commission calculations & revenue attribution</p>
+          </div>
+        </div>
+        <button onclick="App.openAddStaffModal()" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Staff Member
+        </button>
+      </div>
+
+      <!-- Staff Metric Banner -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Active Team Members</div>
+          <div id="staff-stat-total" class="text-xl font-black font-mono text-[#0176D3] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Stylists & Technicians</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Services Completed</div>
+          <div id="staff-stat-services" class="text-xl font-black font-mono text-[#181818] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Attributed Service Volume</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Total Sales Contribution</div>
+          <div id="staff-stat-sales" class="text-xl font-black font-mono text-[#2E844A] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Gross Revenue Generated</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Total Commissions Due</div>
+          <div id="staff-stat-comm" class="text-xl font-black font-mono text-[#DD7A00] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Calculated Staff Payouts</div>
+        </div>
+      </div>
+
+      <!-- Staff Search Bar -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full sm:w-80 relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B]"></i>
+          <input id="staff-search-input" type="text" oninput="App.filterStaff()" placeholder="Search staff by name, role or phone..." class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+        </div>
+        <div class="text-xs text-[#706E6B]">Click <strong>Edit</strong> on any staff card to update role, phone, or commission %.</div>
+      </div>
+
+      <!-- Staff Cards Grid -->
+      <div id="staff-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 6: EXPENSES & EOD ==================== -->
+    <section id="view-expenses" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#2E844A] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="receipt" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Daily Expenses & Cash Flow Management</h2>
+            <p class="text-xs text-[#706E6B]">Log store expenditures, reconcile counter cash & calculate EOD settlement</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="App.openAddExpenseModal()" class="px-3.5 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#181818] border border-[#DDDBDA] font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm">
+            <i data-lucide="plus" class="w-3.5 h-3.5 text-[#0176D3]"></i> Add Expense
+          </button>
+          <button onclick="App.openEODReportModal()" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Calculate EOD Closing
+          </button>
+        </div>
+      </div>
+
+      <!-- Expense Metric Banner -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Today's Total Expenses</div>
+          <div id="exp-stat-today" class="text-xl font-black font-mono text-[#EA001E] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Total Outflow Today</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Cash Drawer Outflow</div>
+          <div id="exp-stat-cash" class="text-xl font-black font-mono text-[#EA001E] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Paid from Counter Drawer</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Online / Bank Outflow</div>
+          <div id="exp-stat-online" class="text-xl font-black font-mono text-[#0176D3] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Paid via UPI / Bank</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Month-to-Date Outflow</div>
+          <div id="exp-stat-month" class="text-xl font-black font-mono text-[#706E6B] mt-0.5">₹0.00</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Cumulative Store Expenses</div>
+        </div>
+      </div>
+
+      <!-- Search & Category Filter Pills -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full md:w-72 relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B]"></i>
+          <input id="expenses-search-input" type="text" oninput="App.renderExpensesTable()" placeholder="Search expense description, date..." class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+        </div>
+        <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
+          <span class="text-[11px] font-bold uppercase text-[#706E6B] mr-1">Category:</span>
+          <button id="exp-cat-All" onclick="App.filterExpenseCategory('All')" class="px-2.5 py-1 rounded text-xs font-bold bg-[#0176D3] text-white transition-all">All</button>
+          <button id="exp-cat-Supplies" onclick="App.filterExpenseCategory('Supplies')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Supplies</button>
+          <button id="exp-cat-Pantry" onclick="App.filterExpenseCategory('Pantry & Refreshment')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Pantry</button>
+          <button id="exp-cat-Maintenance" onclick="App.filterExpenseCategory('Maintenance')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Maintenance</button>
+          <button id="exp-cat-Utility" onclick="App.filterExpenseCategory('Utility Bills')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Utilities</button>
+          <button id="exp-cat-Misc" onclick="App.filterExpenseCategory('Miscellaneous')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Misc</button>
+        </div>
+      </div>
+
+      <!-- Expenses Table -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                <th class="py-2.5 px-4">Date</th>
+                <th class="py-2.5 px-4">Category</th>
+                <th class="py-2.5 px-4">Description</th>
+                <th class="py-2.5 px-4">Payment</th>
+                <th class="py-2.5 px-4">Amount</th>
+                <th class="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 7: APPOINTMENTS ==================== -->
+    <section id="view-appointments" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#0176D3] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="calendar" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Appointments & Client Bookings Schedule</h2>
+            <p class="text-xs text-[#706E6B]">Scheduled client visits, stylist service allocations & 1-click POS conversion</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/appointment" target="_blank" class="px-3 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#0176D3] border border-[#DDDBDA] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all" title="Open Public Client Booking Portal in new tab">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Client Portal
+          </a>
+          <button onclick="App.openAddAppointmentModal()" class="px-3.5 py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Book Appointment
+          </button>
+        </div>
+      </div>
+
+      <!-- Appointment Metric Banner -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Total Bookings</div>
+          <div id="apt-stat-total" class="text-xl font-black font-mono text-[#0176D3] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Scheduled Sessions</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Confirmed Visits</div>
+          <div id="apt-stat-confirmed" class="text-xl font-black font-mono text-[#2E844A] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Expected Clients</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Completed Sessions</div>
+          <div id="apt-stat-completed" class="text-xl font-black font-mono text-[#706E6B] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Successfully Serviced</div>
+        </div>
+        <div class="bg-white border border-[#DDDBDA] rounded p-3.5 shadow-sm">
+          <div class="text-[10px] font-bold uppercase text-[#706E6B]">Pending Action</div>
+          <div id="apt-stat-pending" class="text-xl font-black font-mono text-[#DD7A00] mt-0.5">0</div>
+          <div class="text-[10px] text-[#706E6B] mt-0.5">Ready for POS Checkout</div>
+        </div>
+      </div>
+
+      <!-- Filter Toolbar -->
+      <div class="bg-white border border-[#DDDBDA] rounded p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2 w-full md:w-72 relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-[#706E6B]"></i>
+          <input id="appointments-search-input" type="text" oninput="App.renderAppointmentsList()" placeholder="Search client, phone, service, stylist..." class="w-full slds-input pl-8 pr-3 py-1.5 text-xs">
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] font-bold uppercase text-[#706E6B] mr-1">Status:</span>
+          <button id="apt-status-All" onclick="App.filterAppointmentStatus('All')" class="px-2.5 py-1 rounded text-xs font-bold bg-[#0176D3] text-white transition-all">All</button>
+          <button id="apt-status-Confirmed" onclick="App.filterAppointmentStatus('Confirmed')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Confirmed</button>
+          <button id="apt-status-Completed" onclick="App.filterAppointmentStatus('Completed')" class="px-2.5 py-1 rounded text-xs font-semibold bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] transition-all">Completed</button>
+        </div>
+      </div>
+
+      <!-- Appointments Cards Container -->
+      <div id="appointments-list-container" class="space-y-2.5">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 8: 3:00 PM MAINTENANCE ==================== -->
+    <section id="view-maintenance" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#FE9339] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">Scheduled 3:00 PM (15:00) System Maintenance</h2>
+            <p class="text-xs text-[#706E6B]">Mandatory daily maintenance window, automated cloud backup snapshots & zero-downtime updates</p>
+          </div>
+        </div>
+        <div class="px-3 py-1.5 rounded-full bg-[#FFF4E8] text-[#8C4B00] border border-[#FE9339] font-mono text-xs font-bold flex items-center gap-1.5">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-[#FE9339]"></i>
+          <span>Next Window: 15:00:00 (3:00 PM)</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3">
+          <h3 class="font-bold text-xs uppercase text-[#706E6B]">Maintenance Policy & Operation</h3>
+          <p class="text-xs text-[#3E3E3C] leading-relaxed">
+            In compliance with operational standards, <strong>no ad-hoc software update popups occur during peak business hours</strong>. Every day at <strong>3:00 PM Sharp (15:00:00)</strong>, the system executes its maintenance routine automatically from the server.
+          </p>
+
+          <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] space-y-2 text-xs">
+            <div class="flex justify-between items-center">
+              <span class="text-[#706E6B]">Maintenance Window:</span>
+              <span class="font-bold text-[#DD7A00] font-mono">15:00 - 15:05 (Daily)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[#706E6B]">Pre-Alert Notice:</span>
+              <span class="text-[#181818] font-semibold">Starts at 14:45 (15 min countdown)</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[#706E6B]">Cloud Backup Archive:</span>
+              <span class="text-[#2E844A] font-semibold flex items-center gap-1">
+                <i data-lucide="check" class="w-3 h-3 text-[#2E844A]"></i> Automated ZIP Snapshot
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[#706E6B]">Lock Control:</span>
+              <span class="font-semibold text-[#0176D3]">Server / System Managed Only</span>
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded bg-[#EBF7FE] border border-[#C5E8FC] text-[11px] text-[#014486] flex items-center gap-2">
+            <i data-lucide="lock" class="w-4 h-4 shrink-0 text-[#0176D3]"></i>
+            <span>Maintenance lock triggers strictly on schedule (3:00 PM / 15:00) or directly from the owner's server system — never from public client browsers.</span>
+          </div>
+        </div>
+
+        <!-- Backup Archives Table -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-bold text-xs uppercase text-[#706E6B] flex items-center gap-1.5">
+                <i data-lucide="archive" class="w-3.5 h-3.5 text-[#0176D3]"></i>
+                Generated Backup Archives
+              </h3>
+              <a href="/api/system/download-backup-zip" download class="text-[11px] font-bold text-[#0176D3] hover:underline flex items-center gap-1">
+                <i data-lucide="download" class="w-3 h-3"></i> Download Latest ZIP
+              </a>
+            </div>
+            <div class="overflow-auto max-h-56">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-[#FAFAFA] border-b border-[#DDDBDA] text-[11px] text-[#706E6B] uppercase font-bold">
+                    <th class="py-2 px-3">Archive File</th>
+                    <th class="py-2 px-3">Size</th>
+                    <th class="py-2 px-3">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="backups-list-table">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mt-3 p-2.5 rounded bg-[#F8F9FA] border border-[#DDDBDA] text-[11px] text-[#706E6B] flex items-center gap-2">
+            <i data-lucide="shield" class="w-4 h-4 text-[#2E844A]"></i>
+            <span>All system backups and archives are encrypted and safely preserved.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 9: TAYP EE STORE SETTINGS ==================== -->
+    <section id="view-settings" class="hidden flex-1 overflow-y-auto space-y-4">
+      <!-- SLDS Highlights Panel Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#DDDBDA] rounded p-4 shadow-sm gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded bg-[#0176D3] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="sliders" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-[#181818] leading-tight">TAYP EE — Store &amp; POS Setup</h2>
+            <p class="text-xs text-[#706E6B]">Configure Store Profile, GST Tax Rules, Dynamic UPI QR Code, and Thermal Receipt Printing Options</p>
+          </div>
+        </div>
+        <div class="px-3 py-1 rounded-full text-xs font-bold bg-[#EBF5EE] text-[#2E844A] border border-[#A3D9B5] flex items-center gap-1.5">
+          <i data-lucide="check-circle" class="w-3.5 h-3.5 text-[#2E844A]"></i>
+          <span>TAYP EE Engine Active</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- 1. Store Profile & Invoicing Branding -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-[#F3F3F3] pb-2">
+              <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+                <i data-lucide="store" class="w-4 h-4 text-[#0176D3]"></i>
+                1. Store Profile &amp; Invoice Branding
+              </h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div class="sm:col-span-2">
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Store / Business Name *</label>
+                <input id="setting-shop-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-semibold" placeholder="e.g. TAYP EE — Premium POS">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Tagline / Slogan</label>
+                <input id="setting-shop-tagline" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Modern Salon, Spa &amp; Retail">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Contact Phone Number</label>
+                <input id="setting-shop-phone" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. +91 98765 43210">
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Store Address Line</label>
+                <input id="setting-shop-address" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Shop #12, Commercial Market, Main Boulevard">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Store Email</label>
+                <input id="setting-shop-email" type="email" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. contact@taypee.com">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Website</label>
+                <input id="setting-shop-website" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. www.taypee.com">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Invoice Prefix</label>
+                <input id="setting-shop-prefix" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono uppercase" placeholder="INV">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Currency Symbol</label>
+                <input id="setting-shop-currency" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono text-center" placeholder="₹">
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Invoice Footer Note</label>
+                <input id="setting-shop-footer" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Thank you for visiting! Visit us again soon.">
+              </div>
+            </div>
+          </div>
+
+          <button onclick="App.saveShopSettings()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 mt-2">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save Store Profile</span>
+          </button>
+        </div>
+
+        <!-- 2. GST & Tax Calculation Rules -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-[#F3F3F3] pb-2">
+              <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+                <i data-lucide="percent" class="w-4 h-4 text-[#2E844A]"></i>
+                2. GST &amp; Taxation Rules
+              </h3>
+            </div>
+
+            <!-- Tax Active Toggle -->
+            <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] flex items-center justify-between">
+              <div>
+                <div class="font-bold text-xs text-[#181818]">Enable GST / Tax Calculation</div>
+                <div class="text-[10px] text-[#706E6B]">Calculate tax automatically during POS cart settlement</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-tax-enabled" type="checkbox" class="sr-only peer">
+                <div class="w-9 h-5 bg-[#DDDBDA] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#DDDBDA] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2E844A]"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Tax Label / Name</label>
+                <input id="setting-tax-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. GST">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Business GSTIN Number</label>
+                <input id="setting-tax-gstin" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono uppercase" placeholder="e.g. 07AAAAA0000A1Z5">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">CGST Rate (%)</label>
+                <input id="setting-tax-cgst" type="number" step="0.1" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="9.0">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">SGST Rate (%)</label>
+                <input id="setting-tax-sgst" type="number" step="0.1" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="9.0">
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">IGST Rate (%) (Inter-state)</label>
+                <input id="setting-tax-igst" type="number" step="0.1" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="18.0">
+              </div>
+
+              <!-- Composition Scheme Checkbox -->
+              <div class="flex items-center gap-2 pt-4">
+                <input id="setting-tax-composition" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-tax-composition" class="text-xs font-semibold text-[#181818] cursor-pointer">Composition Scheme</label>
+              </div>
+
+              <div class="sm:col-span-2 flex items-center gap-2 pt-1">
+                <input id="setting-tax-inclusive" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-tax-inclusive" class="text-xs font-semibold text-[#181818] cursor-pointer">Prices are Inclusive of Tax (Tax Inclusive MRP)</label>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="App.saveTaxSettings()" class="w-full py-2 rounded bg-[#2E844A] hover:bg-[#226438] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 mt-2">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save Tax &amp; GST Rules</span>
+          </button>
+        </div>
+
+        <!-- 3. Dynamic UPI QR & Merchant Payment -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-[#F3F3F3] pb-2">
+              <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+                <i data-lucide="qr-code" class="w-4 h-4 text-[#DD7A00]"></i>
+                3. Dynamic UPI QR &amp; Merchant Account
+              </h3>
+            </div>
+
+            <!-- UPI Active Toggle -->
+            <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] flex items-center justify-between">
+              <div>
+                <div class="font-bold text-xs text-[#181818]">Enable Dynamic UPI QR Codes</div>
+                <div class="text-[10px] text-[#706E6B]">Display instant scan &amp; pay UPI QR on billing screen &amp; bills</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="setting-upi-enabled" type="checkbox" class="sr-only peer">
+                <div class="w-9 h-5 bg-[#DDDBDA] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#DDDBDA] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#DD7A00]"></div>
+              </label>
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Merchant / Payee Name *</label>
+              <input id="setting-upi-merchant-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-semibold" placeholder="e.g. TAYP EE">
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Merchant UPI ID / VPA *</label>
+              <input id="setting-upi-id" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono text-[#0176D3] font-bold" placeholder="e.g. yourstore@upi or 9876543210@paytm">
+              <div class="text-[10px] text-[#706E6B] mt-0.5">Supports Google Pay, PhonePe, Paytm, BHIM &amp; Banking UPI apps.</div>
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Merchant Category Code (MCC)</label>
+              <input id="setting-upi-code" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="5411">
+            </div>
+          </div>
+
+          <button onclick="App.saveUpiSettings()" class="w-full py-2 rounded bg-[#DD7A00] hover:bg-[#B36200] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 mt-2">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save UPI Payment Preferences</span>
+          </button>
+        </div>
+
+        <!-- 4. Thermal Receipt & Printer Setup -->
+        <div class="bg-white border border-[#DDDBDA] rounded p-4 shadow-sm space-y-3 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-[#F3F3F3] pb-2">
+              <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-4 h-4 text-[#0176D3]"></i>
+                4. Thermal Receipt &amp; Printing Setup
+              </h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Paper Roll Format</label>
+                <select id="setting-print-paper" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 bg-white font-semibold">
+                  <option value="80mm">Standard 80mm (3-Inch Thermal)</option>
+                  <option value="58mm">Compact 58mm (2-Inch Thermal)</option>
+                  <option value="A4">A4 Full Page Invoice</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Print Copies</label>
+                <select id="setting-print-copies" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 bg-white font-semibold">
+                  <option value="1">1 Copy (Customer Receipt)</option>
+                  <option value="2">2 Copies (Customer + Store Duplicate)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Print Checkbox Options -->
+            <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] space-y-2 text-xs">
+              <div class="flex items-center gap-2">
+                <input id="setting-print-autoprint" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-print-autoprint" class="font-semibold text-[#181818] cursor-pointer">Auto-print receipt immediately upon checkout</label>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input id="setting-print-showqr" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-print-showqr" class="font-semibold text-[#181818] cursor-pointer">Print Dynamic UPI QR Code on receipt</label>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input id="setting-print-showlogo" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-print-showlogo" class="font-semibold text-[#181818] cursor-pointer">Print Store Logo Header on invoice</label>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input id="setting-print-showtax" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-print-showtax" class="font-semibold text-[#181818] cursor-pointer">Print Tax Breakdown (CGST / SGST) items</label>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input id="setting-print-showstaff" type="checkbox" class="w-4 h-4 text-[#0176D3] rounded border-[#DDDBDA]">
+                <label for="setting-print-showstaff" class="font-semibold text-[#181818] cursor-pointer">Print Attending Staff Name on invoice</label>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold uppercase text-[#706E6B] block">Terms &amp; Conditions / Receipt Footer Text</label>
+              <textarea id="setting-print-footer" rows="2" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 resize-none" placeholder="Goods once sold cannot be returned. Please keep receipt safe."></textarea>
+            </div>
+          </div>
+
+          <button onclick="App.savePrinterSettings()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 mt-2">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save Thermal Printer Setup</span>
+          </button>
+        </div>
+
+        <!-- 5. System Release & Version Information -->
+        <div class="col-span-1 md:col-span-2 bg-white border border-[#DDDBDA] rounded p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#001E42] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                <g transform="rotate(45 12 13.5)">
+                  <line x1="8.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+                  <line x1="12" y1="10.5" x2="12" y2="16.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"></line>
+                </g>
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-sm text-[#181818]">TAYP EE Cloud Suite</h3>
+                <span id="system-version-tag" class="bg-[#FE9339]/20 text-[#FE9339] border border-[#FE9339]/50 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">v0.1.0 BETA</span>
+                <span class="bg-[#EBF5EE] text-[#2E844A] border border-[#A3D9B5] text-[10px] font-bold px-2 py-0.5 rounded">Latest Build</span>
+              </div>
+              <p class="text-xs text-[#706E6B] mt-0.5">Enterprise Cloud Architecture • Automated Backups • Multi-platform Android / iOS / Desktop Compatible</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+            <button onclick="App.checkSystemUpdates()" class="px-3 py-1.5 rounded bg-[#F8F9FA] hover:bg-[#EAEAEA] border border-[#DDDBDA] text-xs font-semibold text-[#181818] flex items-center gap-1.5 transition-all shadow-sm">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0176D3]"></i>
+              <span>Check for Updates</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODALS (Enterprise Modal Styling) ==================== -->
+
+  <!-- APP LAUNCHER MODAL (9-Dot Waffle Menu) -->
+  <div id="app-launcher-modal" class="hidden fixed inset-0 bg-[#001E42]/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-14 overflow-y-auto" onclick="if(event.target === this) App.closeAppLauncher()">
+    <div class="bg-white w-full max-w-4xl rounded-lg border border-[#DDDBDA] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      
+      <!-- Header with App Search -->
+      <div class="bg-[#F3F3F3] border-b border-[#DDDBDA] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded bg-[#0176D3] text-white flex items-center justify-center font-bold shadow-sm">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[#181818]">App Launcher</h3>
+            <p class="text-[11px] text-[#706E6B]">All workspaces, integrated cloud suites and 1-click actions</p>
+          </div>
+        </div>
+
+        <!-- Search apps and items -->
+        <div class="flex items-center gap-2">
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#706E6B]"></i>
+            <input id="app-launcher-search" type="text" oninput="App.filterAppLauncher(this.value)" placeholder="Search apps and items..." class="w-full slds-input pl-8 pr-3 py-1 text-xs">
+          </div>
+          <button onclick="App.closeAppLauncher()" class="w-8 h-8 rounded hover:bg-white text-[#706E6B] hover:text-[#181818] flex items-center justify-center border border-transparent hover:border-[#DDDBDA] transition-all" title="Close (ESC)">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- App Launcher Body: Scrollable -->
+      <div class="p-5 overflow-y-auto space-y-6">
+        
+        <!-- SECTION 1: ALL APPS -->
+        <div>
+          <div class="flex items-center justify-between mb-3 pb-1 border-b border-[#F3F3F3]">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-[#706E6B] flex items-center gap-1.5">
+              <i data-lucide="box" class="w-3.5 h-3.5 text-[#0176D3]"></i> All Applications
+            </h4>
+            <span class="text-[10px] text-[#706E6B]">9 Applications Available</span>
+          </div>
+
+          <div id="app-launcher-apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- 1. POS Billing Cloud -->
+            <div onclick="App.launchApp('pos')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="POS Billing Terminal Checkout Sales Counter Invoice">
+              <div class="w-10 h-10 rounded-lg bg-[#0176D3] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="calculator" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">POS Billing Terminal</h5>
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC]">F2</span>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Quick checkout, barcode lookup, inline customer entry & dynamic UPI QR payments.</p>
+              </div>
+            </div>
+
+            <!-- 2. Analytics Cloud -->
+            <div onclick="App.launchApp('dashboard')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Analytics Revenue Cloud Dashboard Reports Profit Sales Metrics">
+              <div class="w-10 h-10 rounded-lg bg-[#2E844A] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Analytics & Revenue Cloud</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Live sales telemetry, drawer reconciliation, payment channel breakdown and staff leaderboard.</p>
+              </div>
+            </div>
+
+            <!-- 3. CRM & Customer Accounts -->
+            <div onclick="App.launchApp('customers')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Customer Accounts CRM Clients Loyalty Wallet Khata Credit">
+              <div class="w-10 h-10 rounded-lg bg-[#0176D3] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Customer Accounts & CRM</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Client loyalty points pool, advance prepaid wallets, khata credit ledger & account history.</p>
+              </div>
+            </div>
+
+            <!-- 4. Inventory & Price Book -->
+            <div onclick="App.launchApp('inventory')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Inventory Price Book Products Stock Services Catalog Items">
+              <div class="w-10 h-10 rounded-lg bg-[#DD7A00] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="boxes" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Inventory & Price Book</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Physical stock on hand, valuation audit, salon treatment menu & low inventory threshold alerts.</p>
+              </div>
+            </div>
+
+            <!-- 5. Staff Directory & Commissions -->
+            <div onclick="App.launchApp('staff')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Staff Directory Commissions Employees Stylists Team Service Cloud">
+              <div class="w-10 h-10 rounded-lg bg-[#8E44AD] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="user-check" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Service Cloud (Staff)</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Stylists, technicians, employee service volume attribution and automated commission calculation.</p>
+              </div>
+            </div>
+
+            <!-- 6. Daily Expenses & Cash Flow -->
+            <div onclick="App.launchApp('expenses')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Expenses Daily Cash Flow EOD Closing Day Drawer Outflow">
+              <div class="w-10 h-10 rounded-lg bg-[#2E844A] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Financial Cloud (Expenses)</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Operational expenditures, petty cash disbursements, day closing register and drawer cash reconciliation.</p>
+              </div>
+            </div>
+
+            <!-- 7. Appointments & Scheduler -->
+            <div onclick="App.launchApp('appointments')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Appointments Bookings Schedule Calendar Field Service Clients">
+              <div class="w-10 h-10 rounded-lg bg-[#0284C7] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Field Service (Appointments)</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Client booking schedule, stylist time slot allocations and 1-click POS conversion.</p>
+              </div>
+            </div>
+
+            <!-- 8. 3:00 PM Maintenance & Updates -->
+            <div onclick="App.launchApp('maintenance')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Maintenance Scheduled 3PM 15:00 System Updates Backup Zip Shield">
+              <div class="w-10 h-10 rounded-lg bg-[#FE9339] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">3:00 PM Maintenance Shield</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Daily automated database integrity check, 15:00 maintenance countdown & cloud backup snapshots.</p>
+              </div>
+            </div>
+
+            <!-- 9. Store Setup & Billing Configurations -->
+            <div onclick="App.launchApp('settings')" class="app-launcher-item bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-md rounded-lg p-3.5 cursor-pointer transition-all flex items-start gap-3 group slds-card-hover" data-title="Settings Setup Configurations Store Profile UPI GST Printer TAYP EE">
+              <div class="w-10 h-10 rounded-lg bg-[#0176D3] text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <i data-lucide="sliders" class="w-5 h-5"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <h5 class="font-bold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors truncate">Store Setup &amp; Settings</h5>
+                </div>
+                <p class="text-[11px] text-[#706E6B] mt-1 line-clamp-2">Business branding profile, GST taxation rates, dynamic UPI QR code and thermal receipt print rules.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: QUICK ACTIONS & SHORTCUTS -->
+        <div>
+          <div class="flex items-center justify-between mb-3 pb-1 border-b border-[#F3F3F3]">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-[#706E6B] flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-[#FE9339]"></i> Quick Actions
+            </h4>
+            <span class="text-[10px] text-[#706E6B]">1-Click Operations</span>
+          </div>
+
+          <div id="app-launcher-actions-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button onclick="App.closeAppLauncher(); App.switchTab('pos'); document.getElementById('pos-inline-phone').focus();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="New Customer Bill POS Sale Checkout F2">
+              <div class="w-7 h-7 rounded bg-[#0176D3]/10 text-[#0176D3] group-hover:bg-[#0176D3] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">New Customer Bill</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openAddCustomerModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Add Customer Account New Client Register">
+              <div class="w-7 h-7 rounded bg-[#0176D3]/10 text-[#0176D3] group-hover:bg-[#0176D3] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Add Customer</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openAddProductModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Add Product SKU Service Treatment Catalog">
+              <div class="w-7 h-7 rounded bg-[#DD7A00]/10 text-[#DD7A00] group-hover:bg-[#DD7A00] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="package-plus" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Add Product / SKU</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openAddStaffModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Add Staff Member Stylist Employee">
+              <div class="w-7 h-7 rounded bg-[#8E44AD]/10 text-[#8E44AD] group-hover:bg-[#8E44AD] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="user-check" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Add Staff Member</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openAddExpenseModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Record Expense Outflow Drawer Cash Spend">
+              <div class="w-7 h-7 rounded bg-[#EA001E]/10 text-[#EA001E] group-hover:bg-[#EA001E] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Record Expense</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openAddAppointmentModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Book Appointment Client Slot Schedule">
+              <div class="w-7 h-7 rounded bg-[#0284C7]/10 text-[#0284C7] group-hover:bg-[#0284C7] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Book Appointment</span>
+            </button>
+
+            <button onclick="App.closeAppLauncher(); App.openEODReportModal();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Day Closing EOD Settlement Register Reconciliation">
+              <div class="w-7 h-7 rounded bg-[#2E844A]/10 text-[#2E844A] group-hover:bg-[#2E844A] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="file-check" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Day Closing (EOD)</span>
+            </button>
+
+            <a href="/api/system/download-backup-zip" download onclick="App.closeAppLauncher();" class="app-launcher-action p-2.5 rounded border border-[#DDDBDA] bg-[#F8F9FA] hover:bg-white hover:border-[#0176D3] hover:shadow-sm text-left transition-all flex items-center gap-2 group" data-title="Download Data ZIP Backup Archive Cloud Database">
+              <div class="w-7 h-7 rounded bg-[#0176D3]/10 text-[#0176D3] group-hover:bg-[#0176D3] group-hover:text-white flex items-center justify-center transition-all">
+                <i data-lucide="download" class="w-4 h-4"></i>
+              </div>
+              <span class="text-xs font-semibold text-[#181818]">Download Data ZIP</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Launcher Footer -->
+      <div class="bg-[#F8F9FA] border-t border-[#DDDBDA] px-5 py-2.5 flex items-center justify-between text-xs text-[#706E6B]">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-[#2E844A]"></span>
+          <span>TAYP EE Cloud System Active</span>
+          <span class="bg-[#FE9339]/20 text-[#FE9339] border border-[#FE9339]/40 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">v0.1.0 BETA</span>
+        </div>
+        <div class="font-mono text-[11px]">
+          Press <kbd class="px-1.5 py-0.5 rounded bg-white border border-[#DDDBDA] text-[#181818] font-bold">ESC</kbd> to close
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKOUT MODAL -->
+  <div id="checkout-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-3 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-sm text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="credit-card" class="w-4 h-4 text-[#0176D3]"></i>
+          Select Payment Method
+        </h3>
+        <button onclick="POS.closeCheckoutModal()" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+
+      <div class="text-center py-1">
+        <div class="text-[11px] font-bold uppercase text-[#706E6B]">Amount Due</div>
+        <div id="checkout-modal-amount" class="text-2xl font-black font-mono text-[#0176D3] mt-0.5">₹0.00</div>
+      </div>
+
+      <!-- Payment Mode Selector -->
+      <div class="grid grid-cols-3 sm:flex gap-1.5">
+        <button id="pay-mode-btn-Cash" onclick="POS.selectPaymentMode('Cash')">
+          <i data-lucide="banknote" class="w-4 h-4"></i>
+          <span>Cash</span>
+        </button>
+        <button id="pay-mode-btn-UPI" onclick="POS.selectPaymentMode('UPI')">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span>UPI QR</span>
+        </button>
+        <button id="pay-mode-btn-Card" onclick="POS.selectPaymentMode('Card')">
+          <i data-lucide="credit-card" class="w-4 h-4"></i>
+          <span>Card</span>
+        </button>
+        <button id="pay-mode-btn-Wallet" onclick="POS.selectPaymentMode('Wallet')">
+          <i data-lucide="wallet" class="w-4 h-4"></i>
+          <span>Wallet</span>
+        </button>
+        <button id="pay-mode-btn-Khata" onclick="POS.selectPaymentMode('Khata')">
+          <i data-lucide="book" class="w-4 h-4"></i>
+          <span>Khata</span>
+        </button>
+      </div>
+
+      <!-- UPI Dynamic QR Container -->
+      <div id="checkout-upi-box" class="hidden text-center p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA]">
+        <img id="checkout-upi-qr-img" src="" alt="Dynamic UPI QR" class="w-40 h-40 mx-auto rounded border border-[#DDDBDA]">
+        <div class="text-xs font-bold text-[#181818] mt-2">Scan & Pay with Any UPI App</div>
+        <div class="text-[11px] text-[#706E6B]">Google Pay • PhonePe • Paytm • BHIM</div>
+      </div>
+
+      <button onclick="POS.finalizeBill()" class="w-full py-2.5 rounded bg-[#2E844A] hover:bg-[#226438] text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5">
+        <i data-lucide="check" class="w-4 h-4"></i>
+        <span>Finalize Transaction & Print</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BILL SUCCESS MODAL -->
+  <div id="bill-success-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded border border-[#DDDBDA] shadow-2xl p-5 text-center space-y-3">
+      <div class="w-12 h-12 rounded-full bg-[#EBF5EE] text-[#2E844A] flex items-center justify-center mx-auto border border-[#A3D9B5]">
+        <i data-lucide="check-circle-2" class="w-7 h-7"></i>
+      </div>
+
+      <div>
+        <h3 class="font-bold text-base text-[#181818]">Transaction Finalized</h3>
+        <div id="success-modal-invoice-no" class="font-mono text-xs font-bold text-[#0176D3] mt-0.5">INV-1001</div>
+        <div id="success-modal-amount" class="text-xl font-black font-mono text-[#2E844A] mt-0.5">₹450.00</div>
+        <div class="text-xs text-[#706E6B] mt-0.5">Payment Method: <span id="success-modal-mode" class="font-semibold text-[#181818]">UPI</span></div>
+      </div>
+
+      <div class="space-y-1.5 pt-2">
+        <button onclick="POS.printCurrentReceipt()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Thermal Receipt (80mm)
+        </button>
+
+        <button onclick="POS.shareCurrentWhatsApp()" class="w-full py-2 rounded bg-[#2E844A] hover:bg-[#226438] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i> Send WhatsApp Invoice
+        </button>
+
+        <button onclick="POS.closeSuccessModal()" class="w-full py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#706E6B] border border-[#DDDBDA] font-semibold text-xs transition-all">
+          Next Customer (F2)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EOD CLOSING MODAL -->
+  <div id="eod-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-3 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-sm text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="clipboard-check" class="w-4 h-4 text-[#0176D3]"></i>
+          End-of-Day Settlement Register
+        </h3>
+        <button onclick="document.getElementById('eod-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+
+      <div class="space-y-1.5 text-xs text-[#181818]">
+        <div class="flex justify-between py-1 border-b border-[#F3F3F3]">
+          <span class="text-[#706E6B]">Settlement Date:</span>
+          <span id="eod-date" class="font-mono text-[#181818]"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-[#F3F3F3]">
+          <span class="text-[#706E6B]">Total Bills:</span>
+          <span id="eod-total-bills" class="font-mono text-[#181818] font-bold"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-[#F3F3F3]">
+          <span class="text-[#706E6B]">Total Gross Sales:</span>
+          <span id="eod-revenue" class="font-mono text-[#2E844A] font-bold"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-[#F3F3F3]">
+          <span class="text-[#706E6B]">Total Expenses:</span>
+          <span id="eod-expenses" class="font-mono text-[#EA001E] font-bold"></span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-[#F3F3F3]">
+          <span class="text-[#706E6B]">Net Daily Profit:</span>
+          <span id="eod-net-profit" class="font-mono text-[#0176D3] font-bold text-sm"></span>
+        </div>
+
+        <div class="p-2.5 rounded bg-[#F8F9FA] border border-[#DDDBDA] space-y-1 mt-2">
+          <div class="font-bold text-xs uppercase text-[#706E6B] mb-0.5">Counter Drawer Tally:</div>
+          <div class="flex justify-between"><span>Cash Collected:</span><span id="eod-cash-collected" class="font-mono text-[#2E844A]"></span></div>
+          <div class="flex justify-between"><span>Cash Expenses:</span><span id="eod-cash-expenses" class="font-mono text-[#EA001E]"></span></div>
+          <div class="flex justify-between font-bold pt-1 border-t border-[#DDDBDA] text-xs">
+            <span>NET CASH IN COUNTER:</span>
+            <span id="eod-cash-in-hand" class="font-mono text-[#2E844A] text-sm"></span>
+          </div>
+        </div>
+
+        <div class="flex justify-between text-[#706E6B] pt-1">
+          <span>UPI Bank Collections:</span>
+          <span id="eod-upi-collected" class="font-mono text-[#0176D3] font-bold"></span>
+        </div>
+        <div class="flex justify-between text-[#706E6B]">
+          <span>Card Collections:</span>
+          <span id="eod-card-collected" class="font-mono text-[#181818] font-bold"></span>
+        </div>
+      </div>
+
+      <button onclick="window.print()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Settlement Register
+      </button>
+    </div>
+  </div>
+
+  <!-- FULLSCREEN 3:00 PM (15:00) SCHEDULED MAINTENANCE OVERLAY -->
+  <div id="maintenance-fullscreen-overlay" class="hidden fixed inset-0 bg-[#001E42]/95 backdrop-blur-md z-50 flex items-center justify-center p-6 select-none">
+    <div class="max-w-md w-full bg-white rounded border border-[#DDDBDA] p-6 text-center space-y-4 shadow-2xl">
+      
+      <!-- Maintenance Icon -->
+      <div class="w-16 h-16 rounded-full bg-[#FFF4E8] text-[#FE9339] border border-[#FE9339]/40 slds-pulse-anim flex items-center justify-center mx-auto">
+        <i data-lucide="shield-alert" class="w-8 h-8"></i>
+      </div>
+
+      <div>
+        <div class="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#FFF4E8] text-[#8C4B00] border border-[#FE9339] mb-1">
+          SCHEDULED DAILY WINDOW (3:00 PM / 15:00)
+        </div>
+        <h2 class="text-lg font-black text-[#181818]">System Maintenance & Updates</h2>
+        <p class="text-xs text-[#706E6B] mt-1 leading-relaxed">
+          The system is currently running scheduled database maintenance, integrity verification, data compaction, and cloud synchronization.
+        </p>
+      </div>
+
+      <!-- Checklist -->
+      <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] text-left space-y-2 text-xs">
+        <div class="flex items-center gap-2 text-[#2E844A] font-semibold">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>Cloud Database Snapshot Backup (ZIP)</span>
+        </div>
+        <div class="flex items-center gap-2 text-[#2E844A] font-semibold">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>Transaction Journal Compaction & Ledger Audit</span>
+        </div>
+        <div class="flex items-center gap-2 text-[#DD7A00] font-semibold animate-pulse">
+          <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+          <span>Applying Core Updates & Re-syncing Sessions...</span>
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button onclick="MaintenanceEngine.emergencyBypass()" class="text-xs text-[#706E6B] hover:text-[#0176D3] underline transition-colors">
+          Emergency Cashier Bypass (PIN Required)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT CUSTOMER MODAL -->
+  <div id="add-customer-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-2.5 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="customer-modal-title" class="font-bold text-xs uppercase text-[#181818]">New Customer Account</h3>
+        <button onclick="document.getElementById('add-customer-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Full Name</label>
+          <input id="new-cust-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Vikram Sharma">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Mobile Phone (10 digits)</label>
+          <input id="new-cust-phone" type="tel" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="9876543210">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Membership Tier</label>
+          <select id="new-cust-tier" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5">
+            <option value="Regular">Regular</option>
+            <option value="Silver">Silver</option>
+            <option value="Gold">Gold</option>
+            <option value="Platinum VIP">Platinum VIP</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Email (Optional)</label>
+          <input id="new-cust-email" type="email" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="email@example.com">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Loyalty Points</label>
+          <input id="new-cust-points" type="number" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" value="0">
+        </div>
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Address / Notes</label>
+          <input id="new-cust-notes" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="Optional address or preference notes">
+        </div>
+      </div>
+      <button id="customer-modal-submit-btn" onclick="App.submitAddCustomer()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-2 shadow-sm">
+        Save Account
+      </button>
+    </div>
+  </div>
+
+  <!-- WALLET RECHARGE MODAL -->
+  <div id="wallet-recharge-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818]">Recharge Customer Wallet</h3>
+        <button onclick="document.getElementById('wallet-recharge-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="text-xs text-[#706E6B]">
+        Account: <strong id="recharge-cust-name" class="text-[#181818]"></strong>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Recharge Amount (₹)</label>
+        <input id="recharge-amount" type="number" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="500">
+      </div>
+      <button onclick="App.submitWalletRecharge()" class="w-full py-1.5 rounded bg-[#2E844A] hover:bg-[#226438] text-white font-bold text-xs shadow-sm">
+        Top-up Wallet
+      </button>
+    </div>
+  </div>
+
+  <!-- KHATA SETTLE MODAL -->
+  <div id="khata-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818]">Settle Khata (Credit)</h3>
+        <button onclick="document.getElementById('khata-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="text-xs text-[#706E6B]">
+        Account: <strong id="khata-cust-name" class="text-[#181818]"></strong><br>
+        Pending Dues: <strong id="khata-pending-amt" class="text-[#EA001E] font-mono"></strong>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Payment Received (₹)</label>
+        <input id="khata-pay-amount" type="number" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="200">
+      </div>
+      <button onclick="App.submitKhata()" class="w-full py-1.5 rounded bg-[#EA001E] hover:bg-[#BA0517] text-white font-bold text-xs shadow-sm">
+        Record Payment
+      </button>
+    </div>
+  </div>
+
+  <!-- ADJUST STOCK MODAL -->
+  <div id="adjust-stock-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818]">Adjust Stock Quantity</h3>
+        <button onclick="document.getElementById('adjust-stock-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="text-xs text-[#706E6B]">
+        Product: <strong id="adjust-stock-name" class="text-[#181818]"></strong><br>
+        Current in Stock: <strong id="adjust-stock-current" class="text-[#0176D3] font-mono"></strong>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Adjustment (+ or -)</label>
+        <input id="adjust-stock-qty" type="number" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="+10 or -2">
+      </div>
+      <button onclick="App.submitAdjustStock()" class="w-full py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs shadow-sm">
+        Save Stock Change
+      </button>
+    </div>
+  </div>
+
+  <!-- EDIT STOCK ITEM MODAL -->
+  <div id="edit-stock-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-3 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="edit-3" class="w-4 h-4 text-[#0176D3]"></i>
+          Edit Stock & Pricing Details
+        </h3>
+        <button onclick="document.getElementById('edit-stock-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Product Name</label>
+          <input id="edit-stock-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-semibold">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Current Stock Qty</label>
+          <input id="edit-stock-qty" type="number" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Min Alert Level</label>
+          <input id="edit-stock-alert" type="number" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Cost Price (₹)</label>
+          <input id="edit-stock-cost" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Selling Price (₹)</label>
+          <input id="edit-stock-price" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono font-bold">
+        </div>
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Supplier / Dealer Name</label>
+          <input id="edit-stock-supplier" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. L'Oreal Wholesale Distributors">
+        </div>
+      </div>
+      <button onclick="App.submitEditStock()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs shadow-sm transition-all">
+        Update Stock Item
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT EXPENSE MODAL -->
+  <div id="add-expense-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="expense-modal-title" class="font-bold text-xs uppercase text-[#181818]">Record Daily Expense</h3>
+        <button onclick="document.getElementById('add-expense-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Date</label>
+        <input id="new-exp-date" type="date" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Expense Category</label>
+        <select id="new-exp-category" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5">
+          <option value="Supplies">Supplies</option>
+          <option value="Pantry & Refreshment">Pantry & Refreshment</option>
+          <option value="Maintenance">Maintenance & Repairs</option>
+          <option value="Utility Bills">Electricity / Water</option>
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Amount (₹)</label>
+        <input id="new-exp-amount" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="250">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Description</label>
+        <input id="new-exp-desc" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Tea for guests & staff">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Payment Mode</label>
+        <select id="new-exp-mode" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5">
+          <option value="Cash">Cash (Counter Drawer)</option>
+          <option value="UPI">UPI</option>
+          <option value="Card">Card</option>
+        </select>
+      </div>
+      <button id="expense-modal-submit-btn" onclick="App.submitAddExpense()" class="w-full py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-2 shadow-sm">
+        Save Expense
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT APPOINTMENT MODAL -->
+  <div id="add-appointment-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-2.5 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="appointment-modal-title" class="font-bold text-xs uppercase text-[#181818]">Book Client Appointment</h3>
+        <button onclick="document.getElementById('add-appointment-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Client Name</label>
+          <input id="apt-cust-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Sameer Khan">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Client Phone</label>
+          <input id="apt-cust-phone" type="tel" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="9876543210">
+        </div>
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Service Required</label>
+          <input id="apt-service-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Keratin Hair Spa">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Assigned Stylist</label>
+          <select id="apt-staff-name" class="w-full slds-input px-2 py-1 text-xs mt-0.5"></select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Status</label>
+          <select id="apt-status" class="w-full slds-input px-2 py-1 text-xs mt-0.5">
+            <option value="Confirmed">Confirmed</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Date</label>
+          <input id="apt-date" type="date" class="w-full slds-input px-2 py-1 text-xs mt-0.5">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Time</label>
+          <input id="apt-time" type="time" class="w-full slds-input px-2 py-1 text-xs mt-0.5">
+        </div>
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Notes (Optional)</label>
+          <input id="apt-notes" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="Special instructions...">
+        </div>
+      </div>
+      <button id="appointment-modal-submit-btn" onclick="App.submitAddAppointment()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-2 shadow-sm">
+        Confirm Booking
+      </button>
+    </div>
+  </div>
+
+  <!-- DISCOUNT MODAL -->
+  <div id="discount-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818]">Apply Cart Discount</h3>
+        <button onclick="document.getElementById('discount-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="flex gap-2">
+        <button id="disc-btn-flat" onclick="App.setDiscountType('flat')" class="flex-1 py-1 rounded bg-[#0176D3] text-white font-bold text-xs">Flat ₹</button>
+        <button id="disc-btn-pct" onclick="App.setDiscountType('percent')" class="flex-1 py-1 rounded bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] font-bold text-xs">Percent %</button>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Discount Value</label>
+        <input id="cart-discount-input" type="number" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="50">
+      </div>
+      <button onclick="App.submitDiscount()" class="w-full py-1.5 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs shadow-sm">
+        Apply Discount
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT PRODUCT / SERVICE MODAL -->
+  <div id="add-product-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-3 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="product-modal-title" class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-[#0176D3]"></i>
+          Add Product / Service to Price Book
+        </h3>
+        <button onclick="document.getElementById('add-product-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-2">
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Item Name</label>
+          <input id="new-prod-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Hair Spa Treatment / Argan Oil">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Category</label>
+          <input id="new-prod-category" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Hair, Skin, Spa, Retail">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Item Classification</label>
+          <select id="new-prod-type" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5">
+            <option value="service">Service (Salon Treatment)</option>
+            <option value="product">Retail Product (Physical SKU)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Selling Price (₹)</label>
+          <input id="new-prod-price" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono font-bold" placeholder="450.00">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Cost Price (₹)</label>
+          <input id="new-prod-cost" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="200.00">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Barcode / Scan Code</label>
+          <input id="new-prod-barcode" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="e.g. 890123456789">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Duration (Mins)</label>
+          <input id="new-prod-duration" type="number" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="30">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Staff Commission (%)</label>
+          <input id="new-prod-comm" type="number" step="0.5" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" value="20.0">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Tax Rate (%)</label>
+          <input id="new-prod-tax" type="number" step="0.5" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" value="18.0">
+        </div>
+      </div>
+      <button id="product-modal-submit-btn" onclick="App.submitAddProduct()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-2 shadow-sm transition-all">
+        Save to Price Book & Catalog
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT STAFF MODAL -->
+  <div id="add-staff-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded border border-[#DDDBDA] shadow-2xl p-4 sm:p-5 space-y-2.5 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="staff-modal-title" class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-4 h-4 text-[#0176D3]"></i>
+          Add Staff Team Member
+        </h3>
+        <button onclick="document.getElementById('add-staff-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Full Name</label>
+        <input id="new-staff-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Imran Ali">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Designation / Role</label>
+        <input id="new-staff-role" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Senior Hair Stylist">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Mobile Phone</label>
+        <input id="new-staff-phone" type="tel" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="9876543210">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Staff Gmail Address</label>
+        <input id="new-staff-email" type="email" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="staff.member@gmail.com">
+        <span class="text-[9px] text-[#706E6B]">Used for 2FA password reset &amp; optional system login</span>
+      </div>
+      <div class="p-2.5 rounded bg-[#F8F9FA] border border-[#DDDBDA] space-y-2">
+        <label class="flex items-center gap-2 text-xs font-semibold text-[#181818] cursor-pointer">
+          <input id="new-staff-enable-login" type="checkbox" onchange="App.toggleStaffLoginFields()" class="rounded text-[#0176D3]">
+          <span>Enable POS Login Account for this Staff</span>
+        </label>
+        <div id="staff-login-fields" class="hidden space-y-2 pt-1 border-t border-[#DDDBDA]">
+          <div>
+            <label class="text-[10px] font-bold uppercase text-[#706E6B]">Login Role</label>
+            <select id="new-staff-login-role" class="w-full slds-input px-2 py-1 text-xs mt-0.5 font-semibold">
+              <option value="cashier">Cashier</option>
+              <option value="manager">Manager</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold uppercase text-[#706E6B]">Initial Password</label>
+            <input id="new-staff-login-password" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="Min 6 characters (or leave blank)">
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 items-end">
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Base Commission (%)</label>
+          <input id="new-staff-comm" type="number" step="0.5" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono font-bold" placeholder="20.0" value="20.0">
+        </div>
+        <label class="flex items-center gap-2 text-xs font-semibold text-[#181818] pb-1 cursor-pointer">
+          <input id="new-staff-active" type="checkbox" checked class="rounded text-[#0176D3]">
+          <span>Active Staff</span>
+        </label>
+      </div>
+      <button id="staff-modal-submit-btn" onclick="App.submitAddStaff()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-2 shadow-sm transition-all">
+        Save Staff Member
+      </button>
+    </div>
+  </div>
+
+  <!-- STAFF DIRECT PASSWORD RESET MODAL -->
+  <div id="staff-reset-password-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="key-round" class="w-4 h-4 text-[#DD7A00]"></i>
+          Reset Staff Password
+        </h3>
+        <button onclick="document.getElementById('staff-reset-password-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div class="text-xs text-[#706E6B]">
+        Resetting password for: <strong id="staff-reset-modal-name" class="text-[#181818]"></strong> (<span id="staff-reset-modal-email" class="font-mono text-[#0176D3]"></span>)
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">New Password</label>
+        <input id="staff-reset-modal-password" type="password" placeholder="At least 6 characters" class="w-full slds-input px-2.5 py-1.5 text-xs mt-0.5 font-semibold">
+      </div>
+      <button id="staff-reset-modal-submit-btn" onclick="App.submitStaffPasswordReset()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs shadow-sm transition-all">
+        Update Staff Password
+      </button>
+    </div>
+  </div>
+
+  <!-- QUICK CUSTOM ITEM MODAL (Ad-hoc Billing Entry) -->
+  <div id="custom-item-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-xs rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="zap" class="w-4 h-4 text-[#FE9339]"></i>
+          Add Custom Item to Bill
+        </h3>
+        <button onclick="document.getElementById('custom-item-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Item / Service Description</label>
+        <input id="custom-item-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Special Hair Styling / Misc">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Price (₹)</label>
+          <input id="custom-item-price" type="number" step="0.01" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold" placeholder="200">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold uppercase text-[#706E6B]">Quantity</label>
+          <input id="custom-item-qty" type="number" min="1" value="1" class="w-full slds-input px-2.5 py-1 text-sm mt-0.5 font-mono font-bold">
+        </div>
+      </div>
+      <button onclick="App.submitCustomItem()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-1 shadow-sm">
+        + Add to Current Bill
+      </button>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT SYSTEM LOGIN USER MODAL -->
+  <div id="system-user-modal" class="hidden fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-sm rounded border border-[#DDDBDA] shadow-2xl p-5 space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[#DDDBDA]">
+        <h3 id="sys-user-modal-title" class="font-bold text-xs uppercase text-[#181818] flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-4 h-4 text-[#0176D3]"></i>
+          Add System Login Account
+        </h3>
+        <button onclick="document.getElementById('system-user-modal').classList.add('hidden')" class="text-[#706E6B] hover:text-[#181818]">✕</button>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Full Name</label>
+        <input id="sys-user-name" type="text" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="e.g. Rahul Cashier">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Username (Verified Gmail Address)</label>
+        <input id="sys-user-username" type="email" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5 font-mono" placeholder="cashier@gmail.com">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Login Password (min 6 chars)</label>
+        <input id="sys-user-password" type="password" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5" placeholder="Enter strong password">
+      </div>
+      <div>
+        <label class="text-[10px] font-bold uppercase text-[#706E6B]">Access Role</label>
+        <select id="sys-user-role" class="w-full slds-input px-2.5 py-1 text-xs mt-0.5">
+          <option value="cashier">Cashier</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button id="sys-user-submit-btn" onclick="AuthGate.submitUserForm()" class="w-full py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white font-bold text-xs mt-1 shadow-sm">
+        Create Login Account
+      </button>
+    </div>
+  </div>
+
+  <!-- THERMAL RECEIPT HIDDEN PRINT CONTAINER -->
+  <div id="thermal-receipt-container"></div>
+
+  <!-- ==================== MOBILE BOTTOM APP NAVIGATION (ANDROID & IOS ONLY) ==================== -->
+  <nav id="mobile-bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#DDDBDA] px-1 py-1 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] flex items-center justify-around select-none">
+    <button type="button" onclick="App.switchTab('pos')" id="mob-tab-pos" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#0176D3] font-bold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="calculator" class="w-5 h-5"></i>
+      <span class="mt-0.5">POS</span>
+    </button>
+    <button type="button" onclick="App.switchTab('appointments')" id="mob-tab-appointments" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#706E6B] font-semibold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="calendar" class="w-5 h-5"></i>
+      <span class="mt-0.5">Appts</span>
+    </button>
+    <button type="button" onclick="App.switchTab('dashboard')" id="mob-tab-dashboard" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#706E6B] font-semibold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+      <span class="mt-0.5">Analytics</span>
+    </button>
+    <button type="button" onclick="App.switchTab('customers')" id="mob-tab-customers" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#706E6B] font-semibold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      <span class="mt-0.5">Clients</span>
+    </button>
+    <button type="button" onclick="App.switchTab('staff')" id="mob-tab-staff" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#706E6B] font-semibold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="user-check" class="w-5 h-5"></i>
+      <span class="mt-0.5">Staff</span>
+    </button>
+    <button type="button" onclick="App.toggleAppLauncher()" id="mob-tab-more" class="flex flex-col items-center justify-center py-1 px-2.5 text-[#706E6B] font-semibold text-[10px] transition-colors active:scale-90">
+      <i data-lucide="grid" class="w-5 h-5"></i>
+      <span class="mt-0.5">More</span>
+    </button>
+  </nav>
+
+  </div><!-- /#app-shell -->
+
+  <!-- ==================== INACTIVITY / IDLE TIMEOUT MODAL ("Are You There ?") ==================== -->
+  <div id="idle-timeout-modal" class="hidden fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-200">
+    <div class="bg-white w-full max-w-sm rounded-xl border-2 border-[#FE9339] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <!-- Modal Header -->
+      <div class="bg-[#FFF4E8] px-5 py-3.5 border-b border-[#FE9339] flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#FE9339] text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="help-circle" class="w-5 h-5"></i>
+          </div>
+          <h3 class="font-extrabold text-sm text-[#8C4B00]">Are You There ?</h3>
+        </div>
+        <button type="button" onclick="AuthGate.dismissIdleWarning()" class="text-[#8C4B00] hover:text-[#181818] text-base font-bold p-1 rounded hover:bg-[#FFE0BE] transition-colors" title="Close">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 text-center space-y-3">
+        <p class="text-xs text-[#3E3E3C] leading-relaxed">
+          You have been inactive for <strong>15 minutes</strong>. To protect your business and billing data, your session will automatically log out.
+        </p>
+
+        <div class="p-3 bg-[#F8F9FA] rounded-lg border border-[#DDDBDA] inline-flex items-center gap-2">
+          <i data-lucide="clock" class="w-4 h-4 text-[#FE9339] animate-pulse"></i>
+          <span class="text-xs text-[#706E6B]">Auto-logout in: <strong id="idle-countdown-seconds" class="text-sm font-black font-mono text-[#EA001E]">30</strong>s</span>
+        </div>
+
+        <div class="text-[11px] text-[#706E6B]">
+          Click <strong>Close</strong> or <strong>Stay Logged In</strong> to continue working.
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3.5 bg-[#F8F9FA] border-t border-[#DDDBDA] flex items-center justify-between gap-2">
+        <button type="button" onclick="AuthGate.forceIdleLogout()" class="px-3 py-2 rounded text-xs font-semibold text-[#706E6B] hover:text-[#EA001E] hover:bg-[#FDF3F2] transition-colors">
+          Log Out Now
+        </button>
+        <button type="button" id="idle-stay-logged-in-btn" onclick="AuthGate.dismissIdleWarning()" class="px-4 py-2 rounded bg-[#0176D3] hover:bg-[#014486] text-white text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Close &amp; Stay Logged In</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="/js/sound.js?v=2.0.4"></script>
+  <script src="/js/print.js?v=2.0.4"></script>
+  <script src="/js/maintenance.js?v=2.0.4"></script>
+  <script src="/js/pos.js?v=2.0.4"></script>
+  <script src="/js/auth.js?v=2.0.4"></script>
+  <script src="/js/app.js?v=2.0.4"></script>
+</body>
+</html>

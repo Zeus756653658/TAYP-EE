@@ -1,0 +1,401 @@
+/* ==========================================================================
+   TAYP EE — Standalone Appointment Booking Portal Stylesheet
+   Modern, Enterprise Grade SLDS UI with Responsive Slots & Confetti
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root {
+  --slds-blue: #0176D3;
+  --slds-blue-dark: #014486;
+  --slds-navy: #001E42;
+  --slds-green: #2E844A;
+  --slds-orange: #DD7A00;
+  --slds-red: #EA001E;
+  --slds-border: #DDDBDA;
+  --slds-bg-light: #F8F9FA;
+  --slds-text-main: #181818;
+  --slds-text-muted: #706E6B;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--slds-text-main);
+  background: linear-gradient(135deg, #001E42 0%, #032D60 40%, #001E42 100%);
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow-x: hidden;
+  padding: 1.5rem 0.75rem;
+}
+
+/* Ambient Background Light */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(1, 118, 211, 0.25) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(46, 132, 74, 0.20) 0%, transparent 45%);
+  z-index: 0;
+}
+
+.bg-grid-pattern {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Card Container */
+.portal-card {
+  position: relative;
+  z-index: 10;
+  background: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 620px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header */
+.portal-header {
+  background: #001E42;
+  color: #FFFFFF;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid #0176D3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Stepper */
+.stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: #F8F9FA;
+  border-bottom: 1px solid var(--slds-border);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--slds-text-muted);
+  transition: all 0.3s ease;
+}
+
+.step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #DDDBDA;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: all 0.3s ease;
+}
+
+.step-item.active {
+  color: var(--slds-blue);
+}
+
+.step-item.active .step-circle {
+  background: var(--slds-blue);
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.25);
+}
+
+.step-item.completed {
+  color: var(--slds-green);
+}
+
+.step-item.completed .step-circle {
+  background: var(--slds-green);
+}
+
+.stepper-line {
+  flex: 1;
+  height: 2px;
+  background: #DDDBDA;
+  margin: 0 0.75rem;
+  transition: background 0.3s ease;
+}
+
+.stepper-line.active {
+  background: var(--slds-green);
+}
+
+/* Form Inputs */
+.form-input {
+  width: 100%;
+  border: 1px solid var(--slds-border);
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--slds-text-main);
+  background-color: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--slds-blue);
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.2);
+}
+
+/* Service & Stylist Chips */
+.selectable-card {
+  border: 1px solid var(--slds-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.selectable-card:hover {
+  border-color: var(--slds-blue);
+  background: #F8F9FA;
+  transform: translateY(-1px);
+}
+
+.selectable-card.selected {
+  border-color: var(--slds-blue);
+  background: #EBF7FE;
+  box-shadow: 0 0 0 2px rgba(1, 118, 211, 0.3);
+}
+
+/* Time Slot Chips */
+.time-slot-chip {
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--slds-border);
+  background: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #3E3E3C;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.time-slot-chip:hover {
+  border-color: var(--slds-blue);
+  color: var(--slds-blue);
+  background: #F8F9FA;
+}
+
+.time-slot-chip.selected {
+  background: var(--slds-blue);
+  color: #FFFFFF;
+  border-color: var(--slds-blue-dark);
+  box-shadow: 0 2px 4px rgba(1, 118, 211, 0.3);
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(180deg, #0176D3 0%, #014486 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #014486 0%, #002D5A 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success Checkmark & Pulse */
+.pulse-ring-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--slds-green);
+  opacity: 0;
+  animation: pulse-expand 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.pulse-ring:nth-child(2) {
+  animation-delay: 0.6s;
+}
+
+@keyframes pulse-expand {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.checkmark-svg {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 3.5;
+  stroke: var(--slds-green);
+  stroke-miterlimit: 10;
+  box-shadow: inset 0 0 0 var(--slds-green);
+  animation: fill-check 0.4s ease-in-out 0.4s forwards, scale-check 0.3s ease-in-out 0.9s both;
+}
+
+.checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3.5;
+  stroke-miterlimit: 10;
+  stroke: var(--slds-green);
+  fill: none;
+  animation: stroke-circle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke-check 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+}
+
+@keyframes stroke-circle {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes stroke-check {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fill-check {
+  100% {
+    box-shadow: inset 0 0 0 35px rgba(46, 132, 74, 0.12);
+  }
+}
+
+@keyframes scale-check {
+  0%, 100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+/* Confetti */
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 50;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
+  border-radius: 2px;
+  animation: confetti-fall 3.2s ease-in-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(650px) rotate(720deg) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Pass Ticket Receipt */
+.booking-ticket {
+  background: #F8F9FA;
+  border: 1px dashed #DDDBDA;
+  border-radius: 10px;
+  padding: 1rem;
+  position: relative;
+}
+
+.booking-ticket::before,
+.booking-ticket::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.booking-ticket::before {
+  left: -7px;
+  border-right: 1px dashed #DDDBDA;
+}
+
+.booking-ticket::after {
+  right: -7px;
+  border-left: 1px dashed #DDDBDA;
+}
