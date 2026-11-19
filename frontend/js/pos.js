@@ -82,15 +82,64 @@ const POS = {
     }
   },
 
+  getStaffList() {
+    let list = window.App?.staffList;
+    if (Array.isArray(list) && list.length > 0) return list;
+    try {
+      const c = localStorage.getItem('taypee_staff_cache');
+      if (c) {
+        list = JSON.parse(c);
+        if (Array.isArray(list) && list.length > 0) {
+          if (window.App) window.App.staffList = list;
+          return list;
+        }
+      }
+    } catch (_) {}
+    // Trigger background fetch if not yet loaded
+    if (window.App && typeof window.App.loadStaff === 'function') {
+      window.App.loadStaff();
+    }
+    return [];
+  },
+
+  renderStaffOptions(selectedStaffId, selectedStaffName) {
+    const list = this.getStaffList();
+    if (!list || list.length === 0) {
+      if (selectedStaffName) {
+        return `<option value="${selectedStaffId || ''}" selected>${selectedStaffName}</option>`;
+      }
+      return `<option value="" selected>Loading Staff...</option>`;
+    }
+
+    let html = `<option value="">-- Assign Staff --</option>`;
+    let hasSelected = false;
+
+    list.forEach(s => {
+      const isSel = String(s.id) === String(selectedStaffId) || (!selectedStaffId && s.name === selectedStaffName);
+      if (isSel) hasSelected = true;
+      const roleInfo = s.role ? ` (${s.role})` : '';
+      html += `<option value="${s.id}" ${isSel ? 'selected' : ''}>${s.name}${roleInfo}</option>`;
+    });
+
+    if (selectedStaffId && !hasSelected) {
+      html += `<option value="${selectedStaffId}" selected>${selectedStaffName || ('Staff ' + selectedStaffId)}</option>`;
+    }
+    return html;
+  },
+
   addToCart(product) {
     const existingIndex = this.cart.findIndex(i => i.id === product.id);
     let defaultStaff = null;
+    const staffList = this.getStaffList();
     const currentUserEmail = (window.AuthGate?.currentUserInfo?.username || '').toLowerCase();
-    if (currentUserEmail && window.App?.staffList) {
-      defaultStaff = window.App.staffList.find(s => (s.email || '').toLowerCase() === currentUserEmail);
+    if (currentUserEmail && staffList.length > 0) {
+      defaultStaff = staffList.find(s => (s.email || '').toLowerCase() === currentUserEmail);
+    }
+    if (!defaultStaff && staffList.length > 0) {
+      defaultStaff = staffList.find(s => s.role && s.role.toLowerCase().includes('cashier')) || staffList[0];
     }
     if (!defaultStaff) {
-      defaultStaff = (window.App && window.App.staffList && window.App.staffList[0]) || { id: '', name: 'General' };
+      defaultStaff = { id: '', name: 'General' };
     }
 
     if (existingIndex > -1) {
@@ -107,8 +156,8 @@ const POS = {
         type: product.type || 'service',
         price: product.price,
         quantity: 1,
-        staff_id: defaultStaff.id,
-        staff_name: defaultStaff.name,
+        staff_id: defaultStaff.id || '',
+        staff_name: defaultStaff.name || 'General',
         staff_commission: staffComm,
         discount_amount: 0.0,
         total: product.price
@@ -140,9 +189,10 @@ const POS = {
 
   setStaff(index, staffId, staffName) {
     if (this.cart[index]) {
-      const matched = window.App?.staffList?.find(s => s.id === staffId);
-      this.cart[index].staff_id = staffId;
-      this.cart[index].staff_name = matched ? matched.name : (staffName || 'Staff');
+      const list = this.getStaffList();
+      const matched = list.find(s => String(s.id) === String(staffId));
+      this.cart[index].staff_id = staffId || '';
+      this.cart[index].staff_name = matched ? matched.name : (staffName && !staffName.startsWith('--') ? staffName : 'General');
       this.renderCart();
     }
   },
@@ -200,10 +250,6 @@ const POS = {
     } else {
       if (emptyState) emptyState.classList.add('hidden');
       
-      const staffOptions = (window.App?.staffList || []).map(s => `
-        <option value="${s.id}" data-name="${s.name}">${s.name} (${s.role})</option>
-      `).join('');
-
       container.innerHTML = this.cart.map((item, idx) => `
         <div class="p-2.5 mb-2 rounded bg-white border border-[#DDDBDA] flex flex-col gap-2 hover:border-[#0176D3] shadow-sm transition-all">
           <div class="flex items-start justify-between">
@@ -213,7 +259,7 @@ const POS = {
             </div>
             <div class="text-right">
               <div class="font-bold text-[#181818] text-xs font-mono">₹${item.total.toFixed(2)}</div>
-              <button onclick="POS.removeFromCart(${idx})" class="text-xs text-[#EA001E] hover:text-[#BA0517] mt-0.5 transition-colors">
+              <button onclick="POS.removeFromCart(${idx})" class="text-xs text-[#EA001E] hover:text-[#BA0517] mt-0.5 transition-colors" title="Remove item">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5 inline"></i>
               </button>
             </div>
@@ -222,11 +268,11 @@ const POS = {
           <div class="flex items-center justify-between pt-1 border-t border-[#F3F3F3] text-xs">
             <!-- Staff selector -->
             <div class="flex items-center gap-1.5">
-              <span class="text-[#706E6B] text-[11px]">Staff:</span>
-              <select onchange="POS.setStaff(${idx}, this.value, this.options[this.selectedIndex].text)" class="bg-white border border-[#DDDBDA] text-[#181818] text-xs rounded px-1.5 py-0.5 focus:border-[#0176D3] focus:outline-none">
-                ${(window.App?.staffList || []).map(s => `
-                  <option value="${s.id}" ${s.id === item.staff_id ? 'selected' : ''}>${s.name} (${s.id})</option>
-                `).join('')}
+              <span class="text-[#706E6B] text-[11px] font-semibold">Staff:</span>
+              <select onchange="POS.setStaff(${idx}, this.value, this.options[this.selectedIndex] ? this.options[this.selectedIndex].text : '')" 
+                      class="bg-white border border-[#DDDBDA] text-[#181818] text-xs rounded px-1.5 py-0.5 focus:border-[#0176D3] focus:outline-none max-w-[150px] truncate"
+                      title="Select attending staff/stylist">
+                ${this.renderStaffOptions(item.staff_id, item.staff_name)}
               </select>
             </div>
 

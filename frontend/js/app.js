@@ -5,7 +5,12 @@ const App = {
   currentTab: 'pos',
   productsList: [],
   customersList: [],
-  staffList: [],
+  staffList: (() => {
+    try {
+      const c = localStorage.getItem('taypee_staff_cache');
+      return c ? JSON.parse(c) : [];
+    } catch (_) { return []; }
+  })(),
   staffPerfList: [],
   stockList: [],
   expensesList: [],
@@ -300,6 +305,9 @@ const App = {
 
     // Refresh specific view data on tab open
     if (tabId === 'pos') {
+      if (!this.staffList || this.staffList.length === 0) {
+        this.loadStaff();
+      }
       this.renderPOSCategories();
       this.renderPOSProductsGrid();
       if (window.POS && typeof POS.renderCart === 'function') POS.renderCart();
@@ -930,11 +938,30 @@ const App = {
   async loadStaff() {
     try {
       const res = await fetch('/api/staff');
-      const data = await res.json();
-      this.staffList = Array.isArray(data) ? data : [];
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          this.staffList = data;
+          try {
+            localStorage.setItem('taypee_staff_cache', JSON.stringify(data));
+          } catch (_) {}
+        }
+      }
     } catch (e) {
       console.warn("Failed to load staff:", e);
-      this.staffList = [];
+    }
+
+    // Fallback to cache if still empty
+    if (!this.staffList || this.staffList.length === 0) {
+      try {
+        const c = localStorage.getItem('taypee_staff_cache');
+        if (c) this.staffList = JSON.parse(c);
+      } catch (_) {}
+    }
+
+    // Refresh POS cart staff dropdown immediately if cart has items
+    if (window.POS && Array.isArray(POS.cart) && POS.cart.length > 0) {
+      POS.renderCart();
     }
   },
 
@@ -2185,13 +2212,19 @@ const App = {
   _populateAppointmentStaffSelect(selectedName) {
     const sel = document.getElementById('apt-staff-name');
     if (!sel) return;
-    const staff = this.staffList || [];
-    if (staff.length === 0) {
+    let staff = this.staffList || [];
+    if (!staff || staff.length === 0) {
+      try {
+        const c = localStorage.getItem('taypee_staff_cache');
+        if (c) staff = JSON.parse(c);
+      } catch (_) {}
+    }
+    if (!staff || staff.length === 0) {
       sel.innerHTML = '<option value="General">General</option>';
       return;
     }
     sel.innerHTML = staff.map(s => `
-      <option value="${s.name}" ${s.name === selectedName ? 'selected' : ''}>${s.name} (${s.id})</option>
+      <option value="${s.name}" ${s.name === selectedName ? 'selected' : ''}>${s.name} (${s.role || s.id})</option>
     `).join('');
     if (selectedName) sel.value = selectedName;
   },
