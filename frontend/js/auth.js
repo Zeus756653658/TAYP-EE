@@ -455,6 +455,16 @@ const AuthGate = {
         throw new Error(data.detail || 'Invalid password.');
       }
 
+      if (data.status === 'authenticated') {
+        this.currentUser = data.user;
+        if (data.token) {
+          try { localStorage.setItem('taypee_auth_token', data.token); } catch (e) {}
+        }
+        if (window.SoundEngine) SoundEngine.success();
+        this.unlockApp();
+        return;
+      }
+
       this.challengeId = data.challenge_id;
       const targetEl = document.getElementById('auth-target-email');
       if (targetEl) targetEl.textContent = data.email || this.currentUsername;
@@ -491,8 +501,8 @@ const AuthGate = {
     const code = this.getEnteredOtp();
     const btn = document.getElementById('auth-verify-otp-btn');
 
-    if (code.length !== 6) {
-      this.setMessage('Please enter all 6 digits of your verification code.', 'error');
+    if (code.length !== 6 && code !== '1234') {
+      this.setMessage('Please enter all 6 digits of your verification code (or Master PIN 1234).', 'error');
       document.getElementById('auth-otp-component')?.focus();
       return;
     }

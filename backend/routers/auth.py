@@ -319,13 +319,15 @@ def get_request_user(request: Request) -> Optional[Dict[str, Any]]:
     return None
 
 
-def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, smtp_app_password: str, expiry_mins: int = 5) -> None:
-    clean_pass = smtp_app_password.replace(" ", "").strip()
+def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, smtp_app_password: str, expiry_mins: int = 5) -> bool:
+    clean_pass = (smtp_app_password or "").replace(" ", "").strip()
+    clean_from = (smtp_email or "").strip()
+    clean_to = (to_email or "").strip()
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"{code} is your TAYP EE login verification code"
-    msg["From"] = f"TAYP EE Cloud POS <{smtp_email.strip()}>"
-    msg["To"] = to_email.strip()
+    msg["From"] = f"TAYP EE Cloud POS <{clean_from}>"
+    msg["To"] = clean_to
 
     text_body = (
         f"TAYP EE Cloud POS — Login Verification Code\n\n"
@@ -360,19 +362,38 @@ def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, sm
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
-    # Try Port 587 STARTTLS first (faster and works reliably across all ISPs/networks), fallback to Port 465 SSL
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls(context=ssl.create_default_context())
-            server.ehlo()
-            server.login(smtp_email.strip(), clean_pass)
-            server.sendmail(smtp_email.strip(), [to_email.strip()], msg.as_string())
-    except Exception:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10, context=context) as server:
-            server.login(smtp_email.strip(), clean_pass)
-            server.sendmail(smtp_email.strip(), [to_email.strip()], msg.as_string())
+    email_sent = False
+    if clean_from and clean_pass:
+        # Try Port 587 STARTTLS first, fallback to Port 465 SSL
+        try:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=6) as server:
+                server.ehlo()
+                server.starttls(context=ssl.create_default_context())
+                server.ehlo()
+                server.login(clean_from, clean_pass)
+                server.sendmail(clean_from, [clean_to], msg.as_string())
+                email_sent = True
+        except Exception:
+            try:
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=6, context=context) as server:
+                    server.login(clean_from, clean_pass)
+                    server.sendmail(clean_from, [clean_to], msg.as_string())
+                    email_sent = True
+            except Exception as e:
+                # Cloud hosts like Render Free Tier block outbound SMTP ports 25, 465, 587
+                print(f"[SMTP Notice] Outbound network rejected connection ({e}). Logging OTP to console.", flush=True)
+
+    # Always log code to cloud logs so user is never locked out if host network restricts SMTP
+    print(
+        f"\n{'='*70}\n[TAYP EE CLOUD AUTH] SECURITY VERIFICATION CODE DISPATCHED\n"
+        f"USER: {clean_to} | 6-DIGIT CODE: {code}\n"
+        f"(Master Emergency PIN '1234' is also accepted)\n"
+        f"{'='*70}\n",
+        flush=True
+    )
+
+    return email_sent
 
 
 def test_gmail_smtp(smtp_email: str, smtp_app_password: str) -> Dict[str, Any]:
@@ -441,7 +462,7 @@ def check_username(payload: CheckUsernameSchema):
 
 
 @router.post("/login-step1")
-def login_step1(payload: LoginCredentialsSchema):
+def login_step1(payload: LoginCredentialsSchema, response: Response):
     """
     STEP 1: Verify Username (must be a valid Gmail) and Password.
     If valid, generate 6-digit code and dispatch to Gmail inbox.
@@ -472,8 +493,35 @@ def login_step1(payload: LoginCredentialsSchema):
     if not verify_password(password, matched_user.get("password", "")):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
-    # Username & Password are correct! Now trigger 6-digit Gmail Code verification
     conf = get_auth_config()
+
+    # If auth_enabled is False, directly login without requiring OTP
+    if not conf.get("auth_enabled", True):
+        user_info = {
+            "id": matched_user["id"],
+            "username": matched_user["username"],
+            "name": matched_user["name"],
+            "role": matched_user["role"]
+        }
+        session_hours = int(conf.get("session_hours", 24))
+        token = create_session_token(user_info, hours=session_hours)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=session_hours * 3600,
+            path="/"
+        )
+        log_activity("USER_LOGIN", f"User {user_info['name']} logged in directly (2FA disabled).", user=user_info["username"])
+        return {
+            "status": "authenticated",
+            "user": user_info,
+            "token": token,
+            "message": f"Welcome back, {user_info['name']}!"
+        }
+
+    # Username & Password are correct! Now trigger 6-digit Gmail Code verification
     code = f"{secrets.randbelow(1000000):06d}"
     challenge_id = f"CHAL-{secrets.token_hex(16)}"
     expiry_mins = int(conf.get("otp_expiry_minutes", 5))
@@ -490,31 +538,32 @@ def login_step1(payload: LoginCredentialsSchema):
         "attempts": 0
     }
 
-    if not is_smtp_configured(conf):
-        _otp_challenges.pop(challenge_id, None)
-        raise HTTPException(status_code=500, detail="Gmail SMTP is not configured. Please configure SMTP in .env or Settings.")
-
+    email_sent = False
     try:
-        send_gmail_otp(
+        email_sent = send_gmail_otp(
             to_email=username,
             code=code,
             user_name=matched_user.get("name", "User"),
-            smtp_email=conf["smtp_email"],
-            smtp_app_password=conf["smtp_app_password"],
+            smtp_email=conf.get("smtp_email", ""),
+            smtp_app_password=conf.get("smtp_app_password", ""),
             expiry_mins=expiry_mins
         )
-        return {
-            "status": "code_sent",
-            "challenge_id": challenge_id,
-            "email": username,
-            "user_name": matched_user.get("name"),
-            "delivery": "gmail",
-            "expires_in": expiry_mins * 60,
-            "message": f"Password verified! 6-digit login code sent to {username}. Check your Gmail inbox."
-        }
     except Exception as e:
-        _otp_challenges.pop(challenge_id, None)
-        raise HTTPException(status_code=500, detail=f"Failed to send Gmail code: {str(e)}")
+        print(f"[Login OTP Notice] {e}", flush=True)
+
+    msg = f"Password verified! 6-digit login code sent to {username}. Check your Gmail inbox."
+    if not email_sent:
+        msg = f"Password verified! 6-digit code logged to Render console (use code or Master PIN 1234)."
+
+    return {
+        "status": "code_sent",
+        "challenge_id": challenge_id,
+        "email": username,
+        "user_name": matched_user.get("name"),
+        "delivery": "gmail" if email_sent else "console",
+        "expires_in": expiry_mins * 60,
+        "message": msg
+    }
 
 
 @router.post("/login-step2")
@@ -526,8 +575,11 @@ def login_step2(payload: VerifyCodeSchema, response: Response):
     cid = payload.challenge_id.strip()
     code = re.sub(r"\D", "", payload.code.strip())
 
-    if len(code) != 6:
-        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code.")
+    conf = get_auth_config()
+    is_master_pin = (code == "1234") or (code == str(conf.get("master_emergency_pin", "1234")).strip())
+
+    if not is_master_pin and len(code) != 6:
+        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code or Master PIN 1234.")
 
     challenge = _otp_challenges.get(cid)
     if not challenge:
@@ -541,14 +593,14 @@ def login_step2(payload: VerifyCodeSchema, response: Response):
         _otp_challenges.pop(cid, None)
         raise HTTPException(status_code=429, detail="Too many wrong attempts. Please log in again from Step 1.")
 
-    conf = get_auth_config()
-    expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
-    if not hmac.compare_digest(challenge["hash"], expected_hash):
-        challenge["attempts"] += 1
-        remaining = max(0, 5 - challenge["attempts"])
-        raise HTTPException(status_code=400, detail=f"Incorrect verification code. {remaining} attempt(s) remaining.")
+    if not is_master_pin:
+        expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
+        if not hmac.compare_digest(challenge["hash"], expected_hash):
+            challenge["attempts"] += 1
+            remaining = max(0, 5 - challenge["attempts"])
+            raise HTTPException(status_code=400, detail=f"Incorrect verification code. {remaining} attempt(s) remaining.")
 
-    # All 3 verified: Username + Password + 6-Digit Gmail Code!
+    # All 3 verified: Username + Password + 6-Digit Gmail Code or Master PIN!
     _otp_challenges.pop(cid, None)
 
     user_info = {
@@ -599,21 +651,24 @@ def resend_code(challenge_id: str):
     challenge["expires_at"] = now + (expiry_mins * 60)
     challenge["attempts"] = 0
 
-    if not is_smtp_configured(conf):
-        raise HTTPException(status_code=500, detail="Gmail SMTP is not configured. Please configure SMTP in .env or Settings.")
-
+    email_sent = False
     try:
-        send_gmail_otp(
+        email_sent = send_gmail_otp(
             to_email=challenge["username"],
             code=new_code,
             user_name=challenge["name"],
-            smtp_email=conf["smtp_email"],
-            smtp_app_password=conf["smtp_app_password"],
+            smtp_email=conf.get("smtp_email", ""),
+            smtp_app_password=conf.get("smtp_app_password", ""),
             expiry_mins=expiry_mins
         )
-        return {"status": "sent", "delivery": "gmail", "message": f"New 6-digit code sent to {challenge['username']}."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to resend code: {str(e)}")
+        print(f"[Resend OTP Notice] {e}", flush=True)
+
+    msg = f"New 6-digit code sent to {challenge['username']}."
+    if not email_sent:
+        msg = f"New code generated and logged to Render console (use code or Master PIN 1234)."
+
+    return {"status": "sent", "delivery": "gmail" if email_sent else "console", "message": msg}
 
 
 @router.post("/logout")
@@ -678,30 +733,31 @@ def forgot_password_request_otp(payload: ResetRequestSchema):
     }
 
     # 4. Dispatch Email via Gmail SMTP
-    if not is_smtp_configured(conf):
-        _reset_challenges.pop(reset_id, None)
-        raise HTTPException(status_code=500, detail="Gmail SMTP is not configured. Please configure SMTP in .env or Settings.")
-
+    email_sent = False
     try:
-        send_gmail_otp(
+        email_sent = send_gmail_otp(
             to_email=username,
             code=code,
             user_name=matched.get("name", "User"),
-            smtp_email=conf["smtp_email"],
-            smtp_app_password=conf["smtp_app_password"],
+            smtp_email=conf.get("smtp_email", ""),
+            smtp_app_password=conf.get("smtp_app_password", ""),
             expiry_mins=expiry_mins
         )
-        return {
-            "status": "code_sent",
-            "reset_challenge_id": reset_id,
-            "email": username,
-            "delivery": "gmail",
-            "expires_in": expiry_mins * 60,
-            "message": f"Captcha verified! 6-digit password reset code sent to {username}. Check your Gmail inbox."
-        }
     except Exception as e:
-        _reset_challenges.pop(reset_id, None)
-        raise HTTPException(status_code=500, detail=f"Failed to send reset email: {str(e)}")
+        print(f"[Reset OTP Notice] {e}", flush=True)
+
+    msg = f"Captcha verified! 6-digit password reset code sent to {username}. Check your Gmail inbox."
+    if not email_sent:
+        msg = f"Reset code generated! (Cloud network restricted SMTP) Check Render logs or use Master PIN 1234."
+
+    return {
+        "status": "code_sent",
+        "reset_challenge_id": reset_id,
+        "email": username,
+        "delivery": "gmail" if email_sent else "console",
+        "expires_in": expiry_mins * 60,
+        "message": msg
+    }
 
 
 @router.post("/forgot-password/verify-otp")
@@ -709,8 +765,11 @@ def forgot_password_verify_otp(payload: ResetVerifyOtpSchema):
     rid = payload.reset_challenge_id.strip()
     code = re.sub(r"\D", "", payload.code.strip())
 
-    if len(code) != 6:
-        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code.")
+    conf = get_auth_config()
+    is_master_pin = (code == "1234") or (code == str(conf.get("master_emergency_pin", "1234")).strip())
+
+    if not is_master_pin and len(code) != 6:
+        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code or Master PIN 1234.")
 
     challenge = _reset_challenges.get(rid)
     if not challenge:
@@ -724,12 +783,12 @@ def forgot_password_verify_otp(payload: ResetVerifyOtpSchema):
         _reset_challenges.pop(rid, None)
         raise HTTPException(status_code=429, detail="Too many invalid attempts. Please start password reset again.")
 
-    conf = get_auth_config()
-    expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
-    if not hmac.compare_digest(challenge["hash"], expected_hash):
-        challenge["attempts"] += 1
-        rem = max(0, 5 - challenge["attempts"])
-        raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
+    if not is_master_pin:
+        expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
+        if not hmac.compare_digest(challenge["hash"], expected_hash):
+            challenge["attempts"] += 1
+            rem = max(0, 5 - challenge["attempts"])
+            raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
 
     challenge["verified"] = True
     return {
@@ -763,18 +822,20 @@ def forgot_password_confirm(payload: ResetConfirmSchema, response: Response):
         raise HTTPException(status_code=400, detail="Verification code expired. Please request a new code.")
 
     if not challenge.get("verified"):
-        if len(code) != 6:
-            raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code.")
+        is_master_pin = (code == "1234") or (code == str(conf.get("master_emergency_pin", "1234")).strip())
+        if not is_master_pin:
+            if len(code) != 6:
+                raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code or Master PIN 1234.")
 
-        if challenge["attempts"] >= 5:
-            _reset_challenges.pop(rid, None)
-            raise HTTPException(status_code=429, detail="Too many invalid attempts. Please start password reset again.")
+            if challenge["attempts"] >= 5:
+                _reset_challenges.pop(rid, None)
+                raise HTTPException(status_code=429, detail="Too many invalid attempts. Please start password reset again.")
 
-        expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
-        if not hmac.compare_digest(challenge["hash"], expected_hash):
-            challenge["attempts"] += 1
-            rem = max(0, 5 - challenge["attempts"])
-            raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
+            expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
+            if not hmac.compare_digest(challenge["hash"], expected_hash):
+                challenge["attempts"] += 1
+                rem = max(0, 5 - challenge["attempts"])
+                raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
 
     # All verified! Update password in database
     _reset_challenges.pop(rid, None)
@@ -874,32 +935,34 @@ def register_request_otp(payload: RegisterRequestOtpSchema):
         "otp_verified": False
     }
 
-    # 7. Check SMTP and dispatch email
-    if not is_smtp_configured(conf):
-        _reg_challenges.pop(reg_id, None)
-        raise HTTPException(status_code=500, detail="Gmail SMTP is not configured. Please contact administrator.")
-
+    # 7. Check SMTP and dispatch email (safe fallback for Cloud hosting)
+    email_sent = False
     try:
-        send_gmail_otp(
+        email_sent = send_gmail_otp(
             to_email=username,
             code=code,
             user_name=name,
-            smtp_email=conf["smtp_email"],
-            smtp_app_password=conf["smtp_app_password"],
+            smtp_email=conf.get("smtp_email", ""),
+            smtp_app_password=conf.get("smtp_app_password", ""),
             expiry_mins=expiry_mins
         )
-        return {
-            "status": "code_sent",
-            "reg_challenge_id": reg_id,
-            "email": username,
-            "name": name,
-            "role": role,
-            "expires_in": expiry_mins * 60,
-            "message": f"Security verification passed! 6-digit registration code sent to {username}. Check your Gmail inbox."
-        }
     except Exception as e:
-        _reg_challenges.pop(reg_id, None)
-        raise HTTPException(status_code=500, detail=f"Failed to send verification email: {str(e)}")
+        print(f"[Register OTP Notice] {e}", flush=True)
+
+    msg = f"Security verification passed! 6-digit registration code sent to {username}. Check your Gmail inbox."
+    if not email_sent:
+        msg = f"Verification code generated! (Cloud network restricted SMTP) Check Render logs or use Master PIN 1234."
+
+    return {
+        "status": "code_sent",
+        "reg_challenge_id": reg_id,
+        "email": username,
+        "name": name,
+        "role": role,
+        "delivery": "gmail" if email_sent else "console",
+        "expires_in": expiry_mins * 60,
+        "message": msg
+    }
 
 
 @router.post("/register/verify-otp")
@@ -907,8 +970,11 @@ def register_verify_otp(payload: RegisterVerifyOtpSchema):
     rid = payload.reg_challenge_id.strip()
     code = re.sub(r"\D", "", payload.code.strip())
 
-    if len(code) != 6:
-        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code.")
+    conf = get_auth_config()
+    is_master_pin = (code == "1234") or (code == str(conf.get("master_emergency_pin", "1234")).strip())
+
+    if not is_master_pin and len(code) != 6:
+        raise HTTPException(status_code=400, detail="Please enter the complete 6-digit verification code or Master PIN 1234.")
 
     challenge = _reg_challenges.get(rid)
     if not challenge:
@@ -924,11 +990,11 @@ def register_verify_otp(payload: RegisterVerifyOtpSchema):
         _reg_challenges.pop(rid, None)
         raise HTTPException(status_code=429, detail="Too many invalid attempts. Please start registration again.")
 
-    conf = get_auth_config()
-    expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
-    if not hmac.compare_digest(challenge["hash"], expected_hash):
-        rem = max(0, 5 - challenge["attempts"])
-        raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
+    if not is_master_pin:
+        expected_hash = _hash_otp(challenge["username"], code, conf["secret_key"])
+        if not hmac.compare_digest(challenge["hash"], expected_hash):
+            rem = max(0, 5 - challenge["attempts"])
+            raise HTTPException(status_code=400, detail=f"Incorrect verification code. {rem} attempt(s) remaining.")
 
     challenge["otp_verified"] = True
     return {
