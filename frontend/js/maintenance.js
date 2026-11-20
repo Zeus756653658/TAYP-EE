@@ -1,4 +1,6 @@
-// Daily 3:00 PM (15:00) Maintenance & System Update Engine
+// Daily Dual-Window Maintenance & System Update Engine
+// Window 1: Night 12:30 AM - 1:00 AM (00:30 - 01:00)
+// Window 2: Afternoon 3:00 PM - 3:15 PM (15:00 - 15:15)
 const MaintenanceEngine = {
   statusData: null,
   warningShown: false,
@@ -40,8 +42,10 @@ const MaintenanceEngine = {
     const badge = document.getElementById('maintenance-countdown-badge');
     if (!badge) return;
 
+    const winDisplay = this.statusData?.active_window_display || "Maintenance";
+
     if (this.statusData?.in_maintenance) {
-      badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5"></span> Maintenance In Progress`;
+      badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5"></span> Maintenance In Progress (${winDisplay})`;
       badge.className = "px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center";
       return;
     }
@@ -55,33 +59,23 @@ const MaintenanceEngine = {
     else if (mins > 0) timeStr = `${mins}m ${secs}s`;
     else timeStr = `${secs}s`;
 
-    const sched = this.statusData?.maintenance_scheduled_time || "15:00";
-    let schedDisplay = "3:00 PM - 3:15 PM";
-    try {
-      const [h, m] = sched.split(':').map(Number);
-      const period = h >= 12 ? 'PM' : 'AM';
-      const h12 = h % 12 || 12;
-      const dur = this.statusData?.duration_minutes || 15;
-      const endM = (m + dur) % 60;
-      const endH = (h + Math.floor((m + dur) / 60));
-      const endPeriod = endH >= 12 ? 'PM' : 'AM';
-      const endH12 = endH % 12 || 12;
-      schedDisplay = `${h12}:${m.toString().padStart(2, '0')} ${period} - ${endH12}:${endM.toString().padStart(2, '0')} ${endPeriod}`;
-    } catch (_) {}
-
-    badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> ${schedDisplay} Maintenance: <span class="font-mono ml-1 text-emerald-300 font-bold">${timeStr}</span>`;
+    badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> ${winDisplay}: <span class="font-mono ml-1 text-emerald-300 font-bold">${timeStr}</span>`;
   },
 
   renderUI(data) {
     const banner = document.getElementById('maintenance-warning-banner');
     const overlay = document.getElementById('maintenance-fullscreen-overlay');
+    const winDisplay = data.active_window_display || "Scheduled Window";
 
-    // 1. Pre-maintenance warning (4:45 PM - 4:59 PM)
+    // 1. Pre-maintenance warning banner
     if (data.warning_active && !data.in_maintenance) {
       if (banner) {
         banner.classList.remove('hidden');
         const minsLeft = Math.ceil(data.seconds_until_maintenance / 60);
-        document.getElementById('maintenance-warning-time').textContent = `${minsLeft} minutes`;
+        const timeEl = document.getElementById('maintenance-warning-time');
+        const winEl = document.getElementById('maintenance-warning-window');
+        if (timeEl) timeEl.textContent = `${minsLeft} minutes`;
+        if (winEl) winEl.textContent = winDisplay;
       }
       if (!this.warningShown) {
         SoundEngine.alert();
@@ -92,11 +86,23 @@ const MaintenanceEngine = {
       if (!data.warning_active) this.warningShown = false;
     }
 
-    // 2. Full Maintenance Lock at 3:00 PM (15:00)
+    // 2. Full Maintenance Lock Overlay
     if (data.in_maintenance) {
-      if (overlay) overlay.classList.remove('hidden');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        const overlayWinEl = document.getElementById('maintenance-overlay-window');
+        if (overlayWinEl) {
+          overlayWinEl.textContent = `SCHEDULED DAILY WINDOW (${winDisplay})`;
+        }
+      }
     } else {
       if (overlay) overlay.classList.add('hidden');
+    }
+
+    // 3. Maintenance Tab (View 8) live indicator
+    const nextWinLabel = document.getElementById('maintenance-view-next-window');
+    if (nextWinLabel) {
+      nextWinLabel.textContent = `Next Window: ${data.next_maintenance} (${data.active_window_display || ''})`;
     }
   },
 
