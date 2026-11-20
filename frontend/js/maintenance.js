@@ -56,12 +56,17 @@ const MaintenanceEngine = {
     else timeStr = `${secs}s`;
 
     const sched = this.statusData?.maintenance_scheduled_time || "15:00";
-    let schedDisplay = "3:00 PM";
+    let schedDisplay = "3:00 PM - 3:15 PM";
     try {
       const [h, m] = sched.split(':').map(Number);
       const period = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 || 12;
-      schedDisplay = `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+      const dur = this.statusData?.duration_minutes || 15;
+      const endM = (m + dur) % 60;
+      const endH = (h + Math.floor((m + dur) / 60));
+      const endPeriod = endH >= 12 ? 'PM' : 'AM';
+      const endH12 = endH % 12 || 12;
+      schedDisplay = `${h12}:${m.toString().padStart(2, '0')} ${period} - ${endH12}:${endM.toString().padStart(2, '0')} ${endPeriod}`;
     } catch (_) {}
 
     badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> ${schedDisplay} Maintenance: <span class="font-mono ml-1 text-emerald-300 font-bold">${timeStr}</span>`;
