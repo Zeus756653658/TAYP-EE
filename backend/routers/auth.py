@@ -9,6 +9,8 @@ import hashlib
 import secrets
 import smtplib
 import ssl
+import urllib.request
+import urllib.error
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, List, Optional
@@ -106,6 +108,7 @@ class UpdateUserSchema(BaseModel):
 class SmtpConfigSchema(BaseModel):
     smtp_email: Optional[str] = None
     smtp_app_password: Optional[str] = None
+    brevo_api_key: Optional[str] = None
     test_connection: Optional[bool] = False
 
 
@@ -202,6 +205,7 @@ def get_auth_config() -> Dict[str, Any]:
         "secret_key": os.getenv("AUTH_SECRET_KEY", "").strip() or secrets.token_hex(32),
         "smtp_email": os.getenv("SMTP_EMAIL", "").strip(),
         "smtp_app_password": os.getenv("SMTP_APP_PASSWORD", "").strip(),
+        "brevo_api_key": os.getenv("BREVO_API_KEY", "").strip(),
         "otp_expiry_minutes": int(os.getenv("OTP_EXPIRY_MINUTES", "5") or "5"),
         "session_hours": int(os.getenv("SESSION_HOURS", "24") or "24"),
     }
@@ -210,7 +214,9 @@ def get_auth_config() -> Dict[str, Any]:
 def is_smtp_configured(conf: Optional[Dict[str, Any]] = None) -> bool:
     if conf is None:
         conf = get_auth_config()
-    return bool(conf.get("smtp_email", "").strip() and conf.get("smtp_app_password", "").strip())
+    has_brevo = bool(conf.get("brevo_api_key", "").strip() and conf.get("smtp_email", "").strip())
+    has_smtp = bool(conf.get("smtp_email", "").strip() and conf.get("smtp_app_password", "").strip())
+    return has_brevo or has_smtp
 
 
 def ensure_default_users() -> List[Dict[str, Any]]:
@@ -319,16 +325,15 @@ def get_request_user(request: Request) -> Optional[Dict[str, Any]]:
     return None
 
 
-def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, smtp_app_password: str, expiry_mins: int = 5) -> bool:
-    clean_pass = (smtp_app_password or "").replace(" ", "").strip()
-    clean_from = (smtp_email or "").strip()
+def send_brevo_otp(to_email: str, code: str, user_name: str, sender_email: str, api_key: str, expiry_mins: int = 5) -> bool:
+    clean_key = (api_key or "").strip()
+    clean_from = (sender_email or "").strip()
     clean_to = (to_email or "").strip()
+    if not clean_key or not clean_from or not clean_to:
+        return False
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"{code} is your TAYP EE login verification code"
-    msg["From"] = f"TAYP EE Cloud POS <{clean_from}>"
-    msg["To"] = clean_to
-
+    url = "https://api.brevo.com/v3/smtp/email"
+    subject = f"{code} is your TAYP EE verification code"
     text_body = (
         f"TAYP EE Cloud POS — Login Verification Code\n\n"
         f"Hello {user_name},\n"
@@ -336,7 +341,6 @@ def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, sm
         f"This code will expire in {expiry_mins} minutes.\n"
         f"If you did not attempt to log in, please secure your account.\n"
     )
-
     html_body = f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #F3F3F3; padding: 24px;">
       <div style="background: #001E42; color: #FFFFFF; padding: 18px 24px; border-radius: 8px 8px 0 0;">
@@ -346,25 +350,129 @@ def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, sm
       <div style="background: #FFFFFF; padding: 28px 24px; border: 1px solid #DDDBDA; border-top: none; border-radius: 0 0 8px 8px;">
         <p style="margin: 0 0 8px 0; font-size: 14px; color: #181818;">Hello <strong>{user_name}</strong>,</p>
         <p style="margin: 0 0 20px 0; font-size: 13px; color: #3E3E3C; line-height: 1.5;">
-          Your username and password have been verified. Enter this 6-digit code to complete login:
+          Your username and credentials have been verified. Enter this 6-digit code to complete authentication:
         </p>
         <div style="text-align: center; background: #EBF7FE; border: 1px solid #C5E8FC; border-radius: 8px; padding: 18px; margin: 0 0 20px 0;">
           <div style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0176D3;">{code}</div>
           <div style="font-size: 11px; color: #706E6B; margin-top: 6px;">Valid for {expiry_mins} minutes • Do not share this code</div>
         </div>
         <p style="margin: 0; font-size: 11px; color: #706E6B;">
-          If you did not attempt to sign in to TAYP EE POS, please check your account credentials immediately.
+          If you did not attempt this action on TAYP EE POS, please check your account credentials immediately.
         </p>
       </div>
     </div>
     """
 
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
+    payload = {
+        "sender": {"name": "TAYP EE Cloud POS", "email": clean_from},
+        "to": [{"email": clean_to, "name": user_name or "User"}],
+        "subject": subject,
+        "htmlContent": html_body,
+        "textContent": text_body
+    }
+
+    try:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "accept": "application/json",
+                "api-key": clean_key,
+                "content-type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status in (200, 201, 202):
+                print(f"[Brevo API] 6-digit verification code successfully sent to {clean_to} via HTTPS port 443!", flush=True)
+                return True
+    except Exception as e:
+        print(f"[Brevo API Error] Failed to send via Brevo HTTPS: {e}", flush=True)
+    return False
+
+
+def test_brevo_api(api_key: str) -> Dict[str, Any]:
+    clean_key = (api_key or "").strip()
+    if not clean_key:
+        return {"ok": False, "error": "Brevo API Key cannot be empty."}
+    try:
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/account",
+            headers={
+                "accept": "application/json",
+                "api-key": clean_key
+            },
+            method="GET"
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return {
+                "ok": True,
+                "email": data.get("email"),
+                "plan": [p.get("type") for p in data.get("plan", [])],
+                "message": f"Brevo API authenticated successfully for {data.get('email', 'Account')}!"
+            }
+    except Exception as e:
+        return {"ok": False, "error": f"Brevo API authentication failed: {str(e)}"}
+
+
+def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, smtp_app_password: str, expiry_mins: int = 5, brevo_api_key: Optional[str] = None) -> bool:
+    clean_pass = (smtp_app_password or "").replace(" ", "").strip()
+    clean_from = (smtp_email or "").strip()
+    clean_to = (to_email or "").strip()
+    clean_brevo = (brevo_api_key or os.getenv("BREVO_API_KEY", "")).strip()
 
     email_sent = False
-    if clean_from and clean_pass:
-        # Try Port 587 STARTTLS first, fallback to Port 465 SSL
+
+    # 1. Primary Cloud Dispatch: Brevo REST API via HTTPS (Port 443) - Bypasses all cloud port blocks
+    if clean_brevo and clean_from:
+        email_sent = send_brevo_otp(
+            to_email=clean_to,
+            code=code,
+            user_name=user_name,
+            sender_email=clean_from,
+            api_key=clean_brevo,
+            expiry_mins=expiry_mins
+        )
+
+    # 2. Secondary Dispatch: Direct Gmail SMTP (Ports 587/465) - Works on localhost, VPS, and paid Render
+    if not email_sent and clean_from and clean_pass:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"{code} is your TAYP EE login verification code"
+        msg["From"] = f"TAYP EE Cloud POS <{clean_from}>"
+        msg["To"] = clean_to
+
+        text_body = (
+            f"TAYP EE Cloud POS — Login Verification Code\n\n"
+            f"Hello {user_name},\n"
+            f"Your 6-digit login verification code is: {code}\n\n"
+            f"This code will expire in {expiry_mins} minutes.\n"
+            f"If you did not attempt to log in, please secure your account.\n"
+        )
+        html_body = f"""
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #F3F3F3; padding: 24px;">
+          <div style="background: #001E42; color: #FFFFFF; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <div style="font-size: 16px; font-weight: 800; letter-spacing: 1px;">TAYP EE — CLOUD POS</div>
+            <div style="font-size: 11px; color: #A8C7FA; margin-top: 2px;">2-Step Gmail Login Verification</div>
+          </div>
+          <div style="background: #FFFFFF; padding: 28px 24px; border: 1px solid #DDDBDA; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #181818;">Hello <strong>{user_name}</strong>,</p>
+            <p style="margin: 0 0 20px 0; font-size: 13px; color: #3E3E3C; line-height: 1.5;">
+              Your username and password have been verified. Enter this 6-digit code to complete login:
+            </p>
+            <div style="text-align: center; background: #EBF7FE; border: 1px solid #C5E8FC; border-radius: 8px; padding: 18px; margin: 0 0 20px 0;">
+              <div style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #0176D3;">{code}</div>
+              <div style="font-size: 11px; color: #706E6B; margin-top: 6px;">Valid for {expiry_mins} minutes • Do not share this code</div>
+            </div>
+            <p style="margin: 0; font-size: 11px; color: #706E6B;">
+              If you did not attempt to sign in to TAYP EE POS, please check your account credentials immediately.
+            </p>
+          </div>
+        </div>
+        """
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
         try:
             with smtplib.SMTP("smtp.gmail.com", 587, timeout=6) as server:
                 server.ehlo()
@@ -381,14 +489,13 @@ def send_gmail_otp(to_email: str, code: str, user_name: str, smtp_email: str, sm
                     server.sendmail(clean_from, [clean_to], msg.as_string())
                     email_sent = True
             except Exception as e:
-                # Cloud hosts like Render Free Tier block outbound SMTP ports 25, 465, 587
                 print(f"[SMTP Notice] Outbound network rejected connection ({e}). Logging OTP to console.", flush=True)
 
     # Always log code to cloud logs so user is never locked out if host network restricts SMTP
     print(
         f"\n{'='*70}\n[TAYP EE CLOUD AUTH] SECURITY VERIFICATION CODE DISPATCHED\n"
         f"USER: {clean_to} | 6-DIGIT CODE: {code}\n"
-        f"(Master Emergency PIN '1234' is also accepted)\n"
+        f"(Delivery: {'Brevo HTTPS API' if email_sent and clean_brevo else ('Gmail SMTP' if email_sent else 'Console/Emergency PIN 1234')})\n"
         f"{'='*70}\n",
         flush=True
     )
@@ -546,7 +653,8 @@ def login_step1(payload: LoginCredentialsSchema, response: Response):
             user_name=matched_user.get("name", "User"),
             smtp_email=conf.get("smtp_email", ""),
             smtp_app_password=conf.get("smtp_app_password", ""),
-            expiry_mins=expiry_mins
+            expiry_mins=expiry_mins,
+            brevo_api_key=conf.get("brevo_api_key", "")
         )
     except Exception as e:
         print(f"[Login OTP Notice] {e}", flush=True)
@@ -659,7 +767,8 @@ def resend_code(challenge_id: str):
             user_name=challenge["name"],
             smtp_email=conf.get("smtp_email", ""),
             smtp_app_password=conf.get("smtp_app_password", ""),
-            expiry_mins=expiry_mins
+            expiry_mins=expiry_mins,
+            brevo_api_key=conf.get("brevo_api_key", "")
         )
     except Exception as e:
         print(f"[Resend OTP Notice] {e}", flush=True)
@@ -741,7 +850,8 @@ def forgot_password_request_otp(payload: ResetRequestSchema):
             user_name=matched.get("name", "User"),
             smtp_email=conf.get("smtp_email", ""),
             smtp_app_password=conf.get("smtp_app_password", ""),
-            expiry_mins=expiry_mins
+            expiry_mins=expiry_mins,
+            brevo_api_key=conf.get("brevo_api_key", "")
         )
     except Exception as e:
         print(f"[Reset OTP Notice] {e}", flush=True)
@@ -944,7 +1054,8 @@ def register_request_otp(payload: RegisterRequestOtpSchema):
             user_name=name,
             smtp_email=conf.get("smtp_email", ""),
             smtp_app_password=conf.get("smtp_app_password", ""),
-            expiry_mins=expiry_mins
+            expiry_mins=expiry_mins,
+            brevo_api_key=conf.get("brevo_api_key", "")
         )
     except Exception as e:
         print(f"[Register OTP Notice] {e}", flush=True)
@@ -1238,6 +1349,7 @@ def get_auth_config_view():
         "smtp_email": conf.get("smtp_email", ""),
         "smtp_configured": is_smtp_configured(conf),
         "has_app_password": bool(conf.get("smtp_app_password", "").strip()),
+        "has_brevo_key": bool(conf.get("brevo_api_key", "").strip()),
         "session_hours": conf.get("session_hours", 24),
         "otp_expiry_minutes": conf.get("otp_expiry_minutes", 5)
     }
@@ -1247,7 +1359,7 @@ def get_auth_config_view():
 def update_auth_config(data: SmtpConfigSchema, request: Request):
     current = get_request_user(request)
     if not current or current.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Only Administrator can configure Gmail SMTP settings.")
+        raise HTTPException(status_code=403, detail="Only Administrator can configure Email / SMTP settings.")
 
     conf = get_auth_config()
     updates: Dict[str, str] = {}
@@ -1262,19 +1374,27 @@ def update_auth_config(data: SmtpConfigSchema, request: Request):
         updates["SMTP_APP_PASSWORD"] = clean_pass
         conf["smtp_app_password"] = clean_pass
 
+    if data.brevo_api_key is not None and data.brevo_api_key.strip() != "":
+        clean_brevo = data.brevo_api_key.strip()
+        updates["BREVO_API_KEY"] = clean_brevo
+        conf["brevo_api_key"] = clean_brevo
+
     test_result = None
-    if data.test_connection and is_smtp_configured(conf):
-        test_result = test_gmail_smtp(conf["smtp_email"], conf["smtp_app_password"])
-        if not test_result.get("ok"):
-            raise HTTPException(status_code=400, detail=test_result.get("error", "Gmail SMTP test connection failed."))
+    if data.test_connection:
+        if conf.get("brevo_api_key"):
+            test_result = test_brevo_api(conf["brevo_api_key"])
+        elif is_smtp_configured(conf):
+            test_result = test_gmail_smtp(conf["smtp_email"], conf["smtp_app_password"])
+        if test_result and not test_result.get("ok"):
+            raise HTTPException(status_code=400, detail=test_result.get("error", "Email connection test failed."))
 
     if updates:
         update_env_file(updates)
 
-    log_activity("SMTP_CONFIG_UPDATE", f"Admin updated Gmail SMTP settings (Sender: {conf.get('smtp_email')})", user=current.get("username"))
+    log_activity("EMAIL_CONFIG_UPDATE", f"Admin updated Email settings (Sender: {conf.get('smtp_email')})", user=current.get("username"))
     return {
         "status": "success",
         "smtp_configured": is_smtp_configured(conf),
         "test_result": test_result,
-        "message": "Gmail SMTP configuration saved successfully in .env!"
+        "message": "Email settings saved successfully in .env!"
     }
