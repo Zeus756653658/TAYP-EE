@@ -103,6 +103,23 @@ def check_maintenance_status() -> Dict[str, Any]:
 
     seconds_until = max(0, int((next_time - now).total_seconds())) if not in_maintenance else 0
 
+    # Calculate active maintenance window progress & remaining time
+    seconds_remaining = 0
+    total_window_seconds = 0
+    window_start_display = ""
+    window_end_display = ""
+    progress_percent = 0.0
+
+    if active_window:
+        t_start = now.replace(hour=active_window["start_hour"], minute=active_window["start_minute"], second=0, microsecond=0)
+        t_end = t_start + timedelta(minutes=active_window["duration_minutes"])
+        seconds_remaining = max(0, int((t_end - now).total_seconds()))
+        total_window_seconds = active_window["duration_minutes"] * 60
+        window_start_display = t_start.strftime("%I:%M %p")
+        window_end_display = t_end.strftime("%I:%M %p")
+        if total_window_seconds > 0:
+            progress_percent = min(100.0, max(0.0, round(((total_window_seconds - seconds_remaining) / total_window_seconds) * 100, 1)))
+
     status = "scheduled"
     if in_maintenance:
         status = "in_progress"
@@ -124,6 +141,11 @@ def check_maintenance_status() -> Dict[str, Any]:
         "active_window_name": window_name,
         "next_maintenance": next_time.strftime("%Y-%m-%d %H:%M:%S"),
         "seconds_until_maintenance": seconds_until,
+        "seconds_remaining_in_maintenance": seconds_remaining,
+        "total_window_seconds": total_window_seconds,
+        "window_start_display": window_start_display,
+        "window_end_display": window_end_display,
+        "progress_percent": progress_percent,
         "in_maintenance": in_maintenance,
         "warning_active": in_warning,
         "status": status,

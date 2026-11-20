@@ -53,7 +53,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   
   <!-- Enterprise UI CSS -->
-  <link rel="stylesheet" href="/css/custom.css?v=2.0.4">
+  <link rel="stylesheet" href="/css/custom.css?v=2.0.5">
 
   <!-- Immediate Session Check to prevent login screen flash on page reload -->
   <script>
@@ -2108,6 +2108,55 @@
         </p>
       </div>
 
+      <!-- ANIMATED CIRCULAR COUNTDOWN CLOCK -->
+      <div class="relative flex flex-col items-center justify-center py-2 bg-[#F8FAFC] border border-[#DDDBDA] rounded-xl p-3 shadow-inner">
+        <!-- SVG Circular Ring -->
+        <div class="relative w-36 h-36 flex items-center justify-center">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+            <!-- Background Ring Track -->
+            <circle cx="60" cy="60" r="50" stroke="#E2E8F0" stroke-width="8" fill="none"/>
+            <!-- Animated Glowing Progress Ring -->
+            <circle cx="60" cy="60" r="50" stroke="#FE9339" stroke-width="8" stroke-linecap="round" fill="none"
+                    id="maint-clock-circle"
+                    stroke-dasharray="314.16"
+                    stroke-dashoffset="0"
+                    class="transition-all duration-1000 ease-linear animate-clock-glow"/>
+            <!-- Pulsing Rotating Marker Dot -->
+            <g class="animate-radar-sweep origin-center">
+              <circle cx="60" cy="10" r="4.5" fill="#0176D3" class="filter drop-shadow-[0_0_4px_#0176D3]"/>
+            </g>
+          </svg>
+
+          <!-- Center Content: Live Digital Countdown Numbers -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center select-none">
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="w-2 h-2 rounded-full bg-[#FE9339] animate-ping"></span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-[#8C4B00]">Countdown</span>
+            </div>
+            <!-- Large Digital Clock Display -->
+            <div id="maint-clock-display" class="text-3xl font-black font-mono tracking-tight text-[#181818] flex items-center justify-center">
+              <span id="maint-clock-digits">--:--</span>
+            </div>
+            <span id="maint-clock-sub" class="text-[10px] font-bold text-[#706E6B] mt-0.5">Time Remaining</span>
+          </div>
+        </div>
+
+        <!-- Animated Progress Bar -->
+        <div class="w-full max-w-xs mt-3 space-y-1">
+          <div class="flex justify-between items-center text-[11px] font-semibold text-[#706E6B]">
+            <span>Maintenance Progress</span>
+            <span id="maint-progress-text" class="font-mono font-bold text-[#DD7A00]">0%</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-[#E2E8F0] overflow-hidden border border-[#CBD5E1]">
+            <div id="maint-progress-bar" class="h-full bg-gradient-to-r from-[#FE9339] to-[#0176D3] rounded-full transition-all duration-1000 animated-stripes" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between items-center text-[10px] text-[#706E6B] pt-0.5 font-mono">
+            <span id="maint-clock-start-label">Started 12:30 AM</span>
+            <span id="maint-clock-end-label">Unlocks at 01:00 AM</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Checklist -->
       <div class="p-3 rounded bg-[#F8F9FA] border border-[#DDDBDA] text-left space-y-2 text-xs">
         <div class="flex items-center gap-2 text-[#2E844A] font-semibold">
@@ -2683,7 +2732,7 @@
   <!-- SCRIPTS -->
   <script src="/js/sound.js?v=2.0.4"></script>
   <script src="/js/print.js?v=2.0.4"></script>
-  <script src="/js/maintenance.js?v=2.0.4"></script>
+  <script src="/js/maintenance.js?v=2.0.5"></script>
   <script src="/js/pos.js?v=2.0.4"></script>
   <script src="/js/auth.js?v=2.0.4"></script>
   <script src="/js/app.js?v=2.0.4"></script>

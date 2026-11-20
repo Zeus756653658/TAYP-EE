@@ -8,7 +8,7 @@ const MaintenanceEngine = {
 
   init() {
     this.pollStatus();
-    setInterval(() => this.pollStatus(), 8000);
+    setInterval(() => this.pollStatus(), 6000);
     setInterval(() => this.updateClock(), 1000);
   },
 
@@ -32,9 +32,68 @@ const MaintenanceEngine = {
       clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
-    if (this.statusData && this.statusData.seconds_until_maintenance > 0) {
+    if (!this.statusData) return;
+
+    if (this.statusData.in_maintenance) {
+      if (this.statusData.seconds_remaining_in_maintenance > 0) {
+        this.statusData.seconds_remaining_in_maintenance--;
+      }
+      this.updateMaintenanceClock(this.statusData.seconds_remaining_in_maintenance);
+    } else if (this.statusData.seconds_until_maintenance > 0) {
       this.statusData.seconds_until_maintenance--;
       this.updateCountdownBadge(this.statusData.seconds_until_maintenance);
+    }
+  },
+
+  updateMaintenanceClock(seconds) {
+    const digitsEl = document.getElementById('maint-clock-digits');
+    const circleEl = document.getElementById('maint-clock-circle');
+    const progText = document.getElementById('maint-progress-text');
+    const progBar = document.getElementById('maint-progress-bar');
+    const startLbl = document.getElementById('maint-clock-start-label');
+    const endLbl = document.getElementById('maint-clock-end-label');
+
+    const totalSeconds = this.statusData?.total_window_seconds || 1800;
+    const remaining = Math.max(0, seconds || 0);
+
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    if (digitsEl) digitsEl.textContent = timeStr;
+
+    const elapsed = Math.max(0, totalSeconds - remaining);
+    const pct = totalSeconds > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / totalSeconds) * 100))) : 0;
+
+    if (progText) progText.textContent = `${pct}%`;
+    if (progBar) progBar.style.width = `${pct}%`;
+
+    // Circumference for r=50 is 2 * PI * 50 = 314.16
+    const circumference = 314.16;
+    if (circleEl) {
+      const remainingRatio = totalSeconds > 0 ? (remaining / totalSeconds) : 0;
+      const offset = circumference * (1 - remainingRatio);
+      circleEl.style.strokeDashoffset = offset;
+    }
+
+    if (startLbl && this.statusData?.window_start_display) {
+      startLbl.textContent = `Started ${this.statusData.window_start_display}`;
+    }
+    if (endLbl && this.statusData?.window_end_display) {
+      endLbl.textContent = `Unlocks at ${this.statusData.window_end_display}`;
+    }
+
+    // Update top header badge as well
+    const badge = document.getElementById('maintenance-countdown-badge');
+    if (badge) {
+      const winDisplay = this.statusData?.active_window_display || "Maintenance";
+      badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5"></span> Maintenance (${timeStr})`;
+      badge.className = "px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center";
+    }
+
+    // When maintenance reaches 0, trigger instant poll to unlock
+    if (remaining <= 0) {
+      this.pollStatus();
     }
   },
 
@@ -42,13 +101,11 @@ const MaintenanceEngine = {
     const badge = document.getElementById('maintenance-countdown-badge');
     if (!badge) return;
 
-    const winDisplay = this.statusData?.active_window_display || "Maintenance";
-
     if (this.statusData?.in_maintenance) {
-      badge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping mr-1.5"></span> Maintenance In Progress (${winDisplay})`;
-      badge.className = "px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center";
-      return;
+      return; // Handled by updateMaintenanceClock
     }
+
+    const winDisplay = this.statusData?.active_window_display || "Maintenance";
 
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -94,6 +151,7 @@ const MaintenanceEngine = {
         if (overlayWinEl) {
           overlayWinEl.textContent = `SCHEDULED DAILY WINDOW (${winDisplay})`;
         }
+        this.updateMaintenanceClock(data.seconds_remaining_in_maintenance);
       }
     } else {
       if (overlay) overlay.classList.add('hidden');
