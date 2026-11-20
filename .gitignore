@@ -16,6 +16,9 @@ data/deleted_staff.json
 data/users.json
 data/cloud_config.json
 data/auth_config.json
+data/invoices/
+data/qr/
+data/reports/
 
 # --- 3. Backup Archives ---
 backups/
