@@ -386,6 +386,9 @@ def send_brevo_otp(to_email: str, code: str, user_name: str, sender_email: str, 
             if resp.status in (200, 201, 202):
                 print(f"[Brevo API] 6-digit verification code successfully sent to {clean_to} via HTTPS port 443!", flush=True)
                 return True
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")
+        print(f"[Brevo API HTTP Error {e.code}] {err_body}", flush=True)
     except Exception as e:
         print(f"[Brevo API Error] Failed to send via Brevo HTTPS: {e}", flush=True)
     return False
@@ -533,6 +536,8 @@ def auth_status(request: Request):
         "user": user,
         "auth_enabled": conf.get("auth_enabled", True),
         "smtp_configured": is_smtp_configured(conf),
+        "has_brevo": bool(conf.get("brevo_api_key", "").strip()),
+        "sender_email": conf.get("smtp_email", "").strip(),
         "version": APP_VERSION,
         "app_name": APP_NAME
     }
