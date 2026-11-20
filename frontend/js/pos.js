@@ -39,7 +39,17 @@ const POS = {
         this.openCheckoutModal('UPI');
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        this.clearCart();
+        if (this.searchQuery) {
+          if (window.App && typeof App.clearPOSSearch === 'function') {
+            App.clearPOSSearch();
+          }
+        } else if (this.activeCategory !== 'All') {
+          if (window.App && typeof App.backToCategories === 'function') {
+            App.backToCategories();
+          }
+        } else if (this.cart && this.cart.length > 0) {
+          this.clearCart();
+        }
       }
     });
   },

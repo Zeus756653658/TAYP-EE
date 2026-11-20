@@ -23,6 +23,8 @@ const App = {
   inventorySubTab: 'stock',
   posTypeFilter: 'all',
   posSortBy: 'default',
+  posDepartment: 'all',
+  posViewMode: 'folders',
   dashAnalyticsPeriod: 'today',
   editingCustomerId: null,
   editingProductId: null,
@@ -588,17 +590,215 @@ const App = {
     }
   },
 
+  getCategoryMeta(rawCat, type) {
+    rawCat = (rawCat || '').trim();
+    let dept = 'Other';
+    let cleanName = rawCat;
+    let emoji = '🏷️';
+    let color = '#0176D3';
+    let bgColor = '#EBF7FE';
+    let desc = 'Salon service';
+
+    if (rawCat.startsWith('Male - ')) {
+      dept = 'Male';
+      cleanName = rawCat.replace(/^Male\s*-\s*/, '').trim();
+    } else if (rawCat.startsWith('Female - ')) {
+      dept = 'Female';
+      cleanName = rawCat.replace(/^Female\s*-\s*/, '').trim();
+    } else if (rawCat === 'Retail Products' || type === 'product') {
+      dept = 'Retail';
+      cleanName = 'Retail Products & Care';
+    } else if (rawCat === 'Hair' || rawCat === 'Beard') {
+      dept = 'Male';
+      cleanName = rawCat === 'Hair' ? 'Haircut & Styling' : 'Beard Grooming';
+    } else if (rawCat === 'Facial & Spa' || rawCat === 'Treatments') {
+      dept = 'Female';
+      cleanName = rawCat;
+    } else if (rawCat === 'Packages') {
+      dept = 'Packages';
+      cleanName = 'Bridal & Groom Combos';
+    }
+
+    const lower = cleanName.toLowerCase();
+    if (lower.includes('essential')) {
+      emoji = dept === 'Male' ? '💈' : '✂️';
+      color = dept === 'Male' ? '#0176D3' : '#D81B60';
+      bgColor = dept === 'Male' ? '#EBF7FE' : '#FCE8E6';
+      desc = dept === 'Male' ? 'Haircuts, Fade, Shave & Beard Styling' : 'Haircuts, Blowdry, Ironing & Essential Styling';
+    } else if (lower.includes('hair treatment') || lower.includes('spa')) {
+      emoji = '💆';
+      color = '#00897B';
+      bgColor = '#E0F2F1';
+      desc = 'Moisturising, Keratin, Protein, Collagen & Rebonding';
+    } else if (lower.includes('loreal') || lower.includes("l'oreal")) {
+      emoji = '🎨';
+      color = '#8E24AA';
+      bgColor = '#F3E5F5';
+      desc = "L'Oréal Professionnel Global, Highlights & Inoa";
+    } else if (lower.includes('schwarzkopf')) {
+      emoji = '🎨';
+      color = '#E65100';
+      bgColor = '#FFF3E0';
+      desc = 'Schwarzkopf Professional Igora & Fashion Hues';
+    } else if (lower.includes('facial') || lower.includes('o3+')) {
+      emoji = '🧖‍♀️';
+      color = '#C2185B';
+      bgColor = '#FCE4EC';
+      desc = 'Radiance, Glow, D-Tan & Skin Rejuvenation';
+    } else if (lower.includes('clean up')) {
+      emoji = '✨';
+      color = '#FB8C00';
+      bgColor = '#FFF8E1';
+      desc = 'Deep Cleansing, Fruit & Brand Special Detan';
+    } else if (lower.includes('nail')) {
+      emoji = '💅';
+      color = '#D81B60';
+      bgColor = '#FCE8E6';
+      desc = 'Gel Polish, Acrylic Extensions, French Tips & Art';
+    } else if (lower.includes('threading')) {
+      emoji = '🧵';
+      color = '#7B1FA2';
+      bgColor = '#F3E5F5';
+      desc = 'Eyebrows, Upper Lip, Forehead & Full Face Threading';
+    } else if (lower.includes('waxing')) {
+      emoji = '🍯';
+      color = '#F57C00';
+      bgColor = '#FFF3E0';
+      desc = 'Rica & Honey Waxing for Arms, Legs & Full Body';
+    } else if (lower.includes('menicure') || lower.includes('pedicure')) {
+      emoji = '🦶';
+      color = '#00897B';
+      bgColor = '#E0F2F1';
+      desc = 'Luxury Spa Pedicure, Manicure & Hand/Foot Therapy';
+    } else if (dept === 'Retail') {
+      emoji = '🛍️';
+      color = '#DD7A00';
+      bgColor = '#FFF4E8';
+      desc = 'Professional Shampoos, Serums, Clays & Oils';
+    } else if (dept === 'Packages') {
+      emoji = '🎁';
+      color = '#6A1B9A';
+      bgColor = '#F3E8FD';
+      desc = 'Complete Bridal Makeover & Groom Combos';
+    } else if (lower.includes('beard')) {
+      emoji = '🧔';
+      color = '#5D4037';
+      bgColor = '#EFEBE9';
+      desc = 'Hot Towel Shave, Beard Shaping & Mustache Trim';
+    }
+
+    return { dept, cleanName, emoji, color, bgColor, desc };
+  },
+
+  setPOSDepartment(dept) {
+    this.posDepartment = dept;
+    POS.activeCategory = 'All';
+    this.updatePOSDepartmentTabs();
+    this.renderPOSCategories();
+    this.renderPOSProductsGrid();
+  },
+
+  updatePOSDepartmentTabs() {
+    const list = Array.isArray(this.productsList) ? this.productsList : [];
+    const depts = ['all', 'Male', 'Female', 'Retail', 'Packages'];
+    
+    // Calculate live counts
+    const counts = {
+      all: list.length,
+      Male: list.filter(p => this.getCategoryMeta(p.category, p.type).dept === 'Male').length,
+      Female: list.filter(p => this.getCategoryMeta(p.category, p.type).dept === 'Female').length,
+      Retail: list.filter(p => this.getCategoryMeta(p.category, p.type).dept === 'Retail').length,
+      Packages: list.filter(p => this.getCategoryMeta(p.category, p.type).dept === 'Packages').length,
+    };
+
+    depts.forEach(d => {
+      const btn = document.getElementById(`pos-dept-${d.toLowerCase()}`);
+      const badge = document.getElementById(`pos-badge-dept-${d.toLowerCase()}`);
+      if (badge && counts[d] !== undefined) {
+        badge.textContent = counts[d];
+      }
+      if (btn) {
+        if (this.posDepartment === d) {
+          btn.className = "px-2.5 py-1 rounded text-xs font-bold transition-all bg-[#0176D3] text-white shadow-sm flex items-center gap-1.5 whitespace-nowrap";
+          if (badge) badge.className = "text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full font-mono text-white";
+        } else {
+          btn.className = "px-2.5 py-1 rounded text-xs font-semibold transition-all bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA] flex items-center gap-1.5 whitespace-nowrap";
+          if (badge) {
+            if (d === 'Male') badge.className = "text-[10px] bg-[#EBF7FE] text-[#0176D3] font-bold px-1.5 py-0.2 rounded-full font-mono";
+            else if (d === 'Female') badge.className = "text-[10px] bg-[#FCE8E6] text-[#C2185B] font-bold px-1.5 py-0.2 rounded-full font-mono";
+            else if (d === 'Retail') badge.className = "text-[10px] bg-[#FFF4E8] text-[#DD7A00] font-bold px-1.5 py-0.2 rounded-full font-mono";
+            else if (d === 'Packages') badge.className = "text-[10px] bg-[#F3E8FD] text-[#8E24AA] font-bold px-1.5 py-0.2 rounded-full font-mono";
+            else badge.className = "text-[10px] bg-[#F3F3F3] text-[#706E6B] font-bold px-1.5 py-0.2 rounded-full font-mono";
+          }
+        }
+      }
+    });
+  },
+
+  setPOSViewMode(mode) {
+    this.posViewMode = mode;
+    const foldersBtn = document.getElementById('pos-view-folders-btn');
+    const gridBtn = document.getElementById('pos-view-grid-btn');
+    if (foldersBtn && gridBtn) {
+      if (mode === 'folders') {
+        foldersBtn.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-[#0176D3] text-white flex items-center gap-1 transition-all";
+        gridBtn.className = "px-2 py-0.5 rounded text-[10px] font-semibold text-[#706E6B] hover:text-[#0176D3] flex items-center gap-1 transition-all";
+      } else {
+        gridBtn.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-[#0176D3] text-white flex items-center gap-1 transition-all";
+        foldersBtn.className = "px-2 py-0.5 rounded text-[10px] font-semibold text-[#706E6B] hover:text-[#0176D3] flex items-center gap-1 transition-all";
+      }
+    }
+    this.renderPOSProductsGrid();
+  },
+
+  openPOSCategory(catKey) {
+    POS.activeCategory = catKey;
+    this.renderPOSCategories();
+    this.renderPOSProductsGrid();
+    const grid = document.getElementById('pos-products-grid');
+    if (grid) grid.scrollTop = 0;
+  },
+
+  backToCategories() {
+    POS.activeCategory = 'All';
+    this.renderPOSCategories();
+    this.renderPOSProductsGrid();
+    const grid = document.getElementById('pos-products-grid');
+    if (grid) grid.scrollTop = 0;
+  },
+
+  clearPOSSearch() {
+    POS.searchQuery = '';
+    const input = document.getElementById('pos-search-input');
+    if (input) input.value = '';
+    this.renderPOSProductsGrid();
+  },
+
   renderPOSCategories() {
     const list = Array.isArray(this.productsList) ? this.productsList : [];
-    const categories = ['All', ...new Set(list.map(p => p.category).filter(Boolean))];
+    const dept = this.posDepartment || 'all';
+    
+    // Filter categories relevant to current department
+    const relevantProds = list.filter(p => {
+      if (dept === 'all') return true;
+      return this.getCategoryMeta(p.category, p.type).dept === dept;
+    });
+
+    const categories = [...new Set(relevantProds.map(p => p.category).filter(Boolean))];
     const container = document.getElementById('pos-categories-container');
     if (!container) return;
 
-    container.innerHTML = categories.map(cat => `
-      <button onclick="App.filterPOSCategory('${cat}')" class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${POS.activeCategory === cat ? 'bg-[#0176D3] text-white shadow-sm' : 'bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA]'}">
-        ${cat}
-      </button>
-    `).join('');
+    container.innerHTML = categories.map(cat => {
+      const meta = this.getCategoryMeta(cat);
+      const isActive = POS.activeCategory === cat;
+      return `
+        <button onclick="App.openPOSCategory('${cat.replace(/'/g, "\\'")}')" 
+                class="px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap transition-all flex items-center gap-1 ${isActive ? 'bg-[#0176D3] text-white shadow-xs' : 'bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA]'}">
+          <span>${meta.emoji}</span>
+          <span class="truncate max-w-[120px]">${meta.cleanName}</span>
+        </button>
+      `;
+    }).join('');
   },
 
   filterPOSCategory(category) {
@@ -613,9 +813,9 @@ const App = {
       const btn = document.getElementById(`pos-type-${t}`);
       if (btn) {
         if (t === type) {
-          btn.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0176D3] text-white transition-all";
+          btn.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-[#0176D3] text-white transition-all";
         } else {
-          btn.className = "px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all";
+          btn.className = "px-2 py-0.5 rounded text-[10px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all";
         }
       }
     });
@@ -623,15 +823,19 @@ const App = {
   },
 
   resetPOSFilters() {
+    this.posDepartment = 'all';
     POS.activeCategory = 'All';
     POS.searchQuery = '';
     this.posTypeFilter = 'all';
     this.posSortBy = 'default';
+    this.posViewMode = 'folders';
     const searchInput = document.getElementById('pos-search-input');
     const sortSelect = document.getElementById('pos-sort-select');
     if (searchInput) searchInput.value = '';
     if (sortSelect) sortSelect.value = 'default';
     this.filterPOSType('all');
+    this.setPOSViewMode('folders');
+    this.updatePOSDepartmentTabs();
     this.renderPOSCategories();
     this.renderPOSProductsGrid();
   },
@@ -703,18 +907,40 @@ const App = {
     const query = (POS.searchQuery || '').toLowerCase().trim();
     const typeFilter = this.posTypeFilter || 'all';
     const sortBy = this.posSortBy || 'default';
+    const dept = this.posDepartment || 'all';
 
     const list = Array.isArray(this.productsList) ? this.productsList : [];
     let filtered = list.filter(p => {
-      const matchCat = POS.activeCategory === 'All' || p.category === POS.activeCategory;
-      const matchType = typeFilter === 'all' || (p.type || 'service') === typeFilter;
-      const matchQuery = !query ||
-        String(p.name || '').toLowerCase().includes(query) ||
-        String(p.category || '').toLowerCase().includes(query) ||
-        String(p.barcode || '').toLowerCase().includes(query) ||
-        String(p.id || '').toLowerCase().includes(query) ||
-        String(p.price || '').includes(query);
-      return matchCat && matchType && matchQuery;
+      // 1. Department filter (ignored if user is searching globally)
+      if (!query && dept !== 'all') {
+        const meta = this.getCategoryMeta(p.category, p.type);
+        if (meta.dept !== dept) return false;
+      }
+
+      // 2. Category filter (ignored if 'All' or if searching)
+      if (!query && POS.activeCategory !== 'All') {
+        if (p.category !== POS.activeCategory) return false;
+      }
+
+      // 3. Type filter
+      if (typeFilter !== 'all' && (p.type || 'service') !== typeFilter) {
+        return false;
+      }
+
+      // 4. Search query
+      if (query) {
+        const meta = this.getCategoryMeta(p.category, p.type);
+        const matchQuery =
+          String(p.name || '').toLowerCase().includes(query) ||
+          String(p.category || '').toLowerCase().includes(query) ||
+          String(meta.cleanName || '').toLowerCase().includes(query) ||
+          String(p.barcode || '').toLowerCase().includes(query) ||
+          String(p.id || '').toLowerCase().includes(query) ||
+          String(p.price || '').includes(query);
+        if (!matchQuery) return false;
+      }
+
+      return true;
     });
 
     if (sortBy === 'price-asc') {
@@ -732,18 +958,135 @@ const App = {
     const grid = document.getElementById('pos-products-grid');
     if (!grid) return;
 
-    const filtered = this._getFilteredPOSProducts();
+    this.updatePOSDepartmentTabs();
+
+    const query = (POS.searchQuery || '').trim();
+    const headerBar = document.getElementById('pos-category-header-bar');
     const countBadge = document.getElementById('pos-products-count-badge');
-    if (countBadge) countBadge.textContent = `${filtered.length} items`;
     const mobCatBadge = document.getElementById('pos-mob-catalog-badge');
+
+    // SCENARIO 1: USER IS IN FOLDER VIEW, NO ACTIVE CATEGORY SELECTED, NO SEARCH
+    // -> Render Billing X Style Category Cards / Folders!
+    if (this.posViewMode === 'folders' && POS.activeCategory === 'All' && !query) {
+      if (headerBar) headerBar.classList.add('hidden');
+
+      const dept = this.posDepartment || 'all';
+      const typeFilter = this.posTypeFilter || 'all';
+      const list = Array.isArray(this.productsList) ? this.productsList : [];
+
+      // Filter products by department and type
+      const deptProds = list.filter(p => {
+        if (dept !== 'all') {
+          const meta = this.getCategoryMeta(p.category, p.type);
+          if (meta.dept !== dept) return false;
+        }
+        if (typeFilter !== 'all' && (p.type || 'service') !== typeFilter) {
+          return false;
+        }
+        return true;
+      });
+
+      // Group by category
+      const groups = {};
+      deptProds.forEach(p => {
+        const rawCat = p.category || 'Other';
+        if (!groups[rawCat]) groups[rawCat] = [];
+        groups[rawCat].push(p);
+      });
+
+      const catKeys = Object.keys(groups);
+
+      if (countBadge) countBadge.textContent = `${catKeys.length} categories (${deptProds.length} items)`;
+      if (mobCatBadge) mobCatBadge.textContent = deptProds.length;
+
+      if (catKeys.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center text-[#706E6B] flex flex-col items-center justify-center gap-2.5">
+            <i data-lucide="folder-search" class="w-10 h-10 stroke-1 text-[#C9C7C5]"></i>
+            <div class="text-xs font-semibold text-[#181818]">No categories found in this section.</div>
+            <button onclick="App.resetPOSFilters()" class="px-3 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] text-xs font-semibold transition-all">
+              Reset Filters
+            </button>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = catKeys.map(catKey => {
+        const prods = groups[catKey];
+        const meta = this.getCategoryMeta(catKey, prods[0]?.type);
+        const prices = prods.map(p => Number(p.price || 0));
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const priceLabel = minPrice === maxPrice ? `₹${minPrice.toFixed(0)}` : `₹${minPrice.toFixed(0)} - ₹${maxPrice.toFixed(0)}`;
+
+        return `
+          <div onclick="App.openPOSCategory('${catKey.replace(/'/g, "\\'")}')"
+               class="group relative bg-white border border-[#DDDBDA] hover:border-[#0176D3] hover:shadow-lg rounded-lg p-3.5 cursor-pointer flex flex-col justify-between transition-all slds-card-hover select-none min-h-[135px]">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl shadow-xs transition-transform group-hover:scale-110"
+                     style="background-color: ${meta.bgColor}; color: ${meta.color}">
+                  ${meta.emoji}
+                </div>
+                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#F3F3F3] text-[#181818] border border-[#DDDBDA] group-hover:bg-[#EBF7FE] group-hover:text-[#0176D3] group-hover:border-[#C5E8FC] transition-colors">
+                  ${prods.length} ${prods.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              <h3 class="font-extrabold text-xs text-[#181818] group-hover:text-[#0176D3] transition-colors leading-snug line-clamp-2">
+                ${meta.cleanName}
+              </h3>
+              <p class="text-[10px] text-[#706E6B] line-clamp-1 mt-0.5">
+                ${meta.desc}
+              </p>
+            </div>
+            <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-[#F3F3F3] text-[10px]">
+              <span class="text-[#706E6B]">From <strong class="text-[#0176D3] font-mono font-bold">${priceLabel}</strong></span>
+              <span class="text-[#0176D3] font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                View <i data-lucide="chevron-right" class="w-3 h-3"></i>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    // SCENARIO 2: INSIDE A CATEGORY OR ALL ITEMS GRID OR SEARCHING
+    const filtered = this._getFilteredPOSProducts();
+
+    if (countBadge) countBadge.textContent = `${filtered.length} items`;
     if (mobCatBadge) mobCatBadge.textContent = filtered.length;
+
+    // Handle Breadcrumb Header
+    if (headerBar) {
+      if (POS.activeCategory !== 'All' && !query) {
+        headerBar.classList.remove('hidden');
+        const meta = this.getCategoryMeta(POS.activeCategory);
+        const deptLabel = meta.dept === 'Male' ? "Men's Salon" : meta.dept === 'Female' ? "Women's Salon" : meta.dept === 'Retail' ? "Retail & Care" : "Salon Services";
+        
+        const bDept = document.getElementById('pos-breadcrumb-dept');
+        const bName = document.getElementById('pos-breadcrumb-name');
+        const bCount = document.getElementById('pos-breadcrumb-count');
+        if (bDept) bDept.textContent = deptLabel;
+        if (bName) bName.innerHTML = `<span>${meta.emoji}</span> <span>${meta.cleanName}</span>`;
+        if (bCount) bCount.textContent = `${filtered.length} items`;
+      } else {
+        headerBar.classList.add('hidden');
+      }
+    }
 
     if (filtered.length === 0) {
       grid.innerHTML = `
         <div class="col-span-full py-12 text-center text-[#706E6B] flex flex-col items-center justify-center gap-2.5">
           <i data-lucide="package-search" class="w-10 h-10 stroke-1 text-[#C9C7C5]"></i>
           <div class="text-xs font-semibold text-[#181818]">No products or services found.</div>
-          <div class="text-[11px] text-[#706E6B]">Try clearing filters or add a new item directly to your catalog.</div>
+          <div class="text-[11px] text-[#706E6B]">
+            ${query ? `No match for "${query}". Try different keywords.` : 'Try clearing filters or add a new item.'}
+          </div>
           <div class="flex items-center gap-2 mt-1">
             <button onclick="App.resetPOSFilters()" class="px-3 py-1.5 rounded bg-white hover:bg-[#F3F3F3] text-[#3E3E3C] border border-[#DDDBDA] text-xs font-semibold transition-all">
               Reset Filters
@@ -761,8 +1104,21 @@ const App = {
         cartQtyMap[ci.id] = (cartQtyMap[ci.id] || 0) + (ci.quantity || 1);
       });
 
-      grid.innerHTML = filtered.map(p => {
+      let searchBanner = '';
+      if (query) {
+        searchBanner = `
+          <div class="col-span-full bg-[#EBF7FE] border border-[#C5E8FC] rounded px-3 py-1.5 text-xs text-[#0176D3] font-semibold flex items-center justify-between mb-1">
+            <span>Search results for "<strong>${query}</strong>" (${filtered.length} items)</span>
+            <button onclick="App.clearPOSSearch()" class="text-[#0176D3] hover:underline font-bold text-[11px] flex items-center gap-1">
+              ✕ Clear Search
+            </button>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = searchBanner + filtered.map(p => {
         const inCartQty = cartQtyMap[p.id] || 0;
+        const meta = this.getCategoryMeta(p.category, p.type);
         const hasStockInfo = p.type === 'product' && p.current_stock !== undefined && p.current_stock !== null;
         const isOut = hasStockInfo && p.current_stock <= 0;
         const stockBadge = hasStockInfo
@@ -779,8 +1135,8 @@ const App = {
           ${inCartQty > 0 ? `<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-[#0176D3] text-white text-[10px] font-extrabold font-mono shadow-md">${inCartQty} in cart</span>` : ''}
           <div>
             <div class="flex items-center justify-between gap-1 mb-1.5">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded truncate max-w-[65%] ${p.type === 'product' ? 'bg-[#FFF4E8] text-[#DD7A00] border border-[#FFD599]' : 'bg-[#EBF7FE] text-[#0176D3] border border-[#C5E8FC]'}">
-                ${p.category}
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded truncate max-w-[65%]" style="background-color: ${meta.bgColor}; color: ${meta.color}">
+                ${meta.emoji} ${meta.cleanName}
               </span>
               ${stockBadge}
             </div>

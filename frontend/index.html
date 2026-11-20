@@ -554,20 +554,76 @@
             </div>
           </div>
 
-          <!-- Type Switcher + Category Pills + Live Item Count -->
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 flex-1">
-              <!-- Type Filter Pills -->
-              <div class="flex items-center bg-[#F3F3F3] p-0.5 rounded-full border border-[#DDDBDA] shrink-0 mr-1">
-                <button id="pos-type-all" onclick="App.filterPOSType('all')" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0176D3] text-white transition-all">All</button>
-                <button id="pos-type-service" onclick="App.filterPOSType('service')" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Services</button>
-                <button id="pos-type-product" onclick="App.filterPOSType('product')" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Products</button>
+          <!-- Department Selector Bar (Billing X Hierarchy Level 1) & View Mode -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-y border-[#DDDBDA] py-2 bg-[#F8FAFC] -mx-3 sm:-mx-4 px-3 sm:px-4">
+            <!-- Department Tabs -->
+            <div id="pos-dept-tabs" class="flex items-center gap-1.5 overflow-x-auto pb-0.5 max-w-full">
+              <button id="pos-dept-all" onclick="App.setPOSDepartment('all')" class="px-2.5 py-1 rounded text-xs font-bold transition-all bg-[#0176D3] text-white shadow-sm flex items-center gap-1.5 whitespace-nowrap">
+                <span>🌟 All Items</span>
+                <span id="pos-badge-dept-all" class="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full font-mono">136</span>
+              </button>
+              <button id="pos-dept-male" onclick="App.setPOSDepartment('Male')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA] flex items-center gap-1.5 whitespace-nowrap">
+                <span>👨 Men's Salon</span>
+                <span id="pos-badge-dept-male" class="text-[10px] bg-[#EBF7FE] text-[#0176D3] font-bold px-1.5 py-0.2 rounded-full font-mono">33</span>
+              </button>
+              <button id="pos-dept-female" onclick="App.setPOSDepartment('Female')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA] flex items-center gap-1.5 whitespace-nowrap">
+                <span>👩 Women's Salon</span>
+                <span id="pos-badge-dept-female" class="text-[10px] bg-[#FCE8E6] text-[#C2185B] font-bold px-1.5 py-0.2 rounded-full font-mono">98</span>
+              </button>
+              <button id="pos-dept-retail" onclick="App.setPOSDepartment('Retail')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA] flex items-center gap-1.5 whitespace-nowrap">
+                <span>🛍️ Retail & Products</span>
+                <span id="pos-badge-dept-retail" class="text-[10px] bg-[#FFF4E8] text-[#DD7A00] font-bold px-1.5 py-0.2 rounded-full font-mono">4</span>
+              </button>
+              <button id="pos-dept-packages" onclick="App.setPOSDepartment('Packages')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-white text-[#3E3E3C] hover:bg-[#F3F3F3] hover:text-[#0176D3] border border-[#DDDBDA] flex items-center gap-1.5 whitespace-nowrap">
+                <span>🎁 Combos</span>
+                <span id="pos-badge-dept-packages" class="text-[10px] bg-[#F3E8FD] text-[#8E24AA] font-bold px-1.5 py-0.2 rounded-full font-mono">1</span>
+              </button>
+            </div>
+
+            <!-- View Mode Switcher & Count Badge -->
+            <div class="flex items-center gap-1.5 shrink-0 justify-between sm:justify-end">
+              <!-- Type Filter Pills (All / Services / Products) -->
+              <div class="flex items-center bg-white p-0.5 rounded border border-[#DDDBDA]">
+                <button id="pos-type-all" onclick="App.filterPOSType('all')" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0176D3] text-white transition-all">All</button>
+                <button id="pos-type-service" onclick="App.filterPOSType('service')" class="px-2 py-0.5 rounded text-[10px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Services</button>
+                <button id="pos-type-product" onclick="App.filterPOSType('product')" class="px-2 py-0.5 rounded text-[10px] font-semibold text-[#3E3E3C] hover:text-[#0176D3] transition-all">Products</button>
               </div>
-              <div id="pos-categories-container" class="flex gap-1.5">
-                <!-- Dynamically populated -->
+
+              <!-- View Switcher (Category Folders vs All Items Grid) -->
+              <div class="flex items-center bg-white p-0.5 rounded border border-[#DDDBDA]">
+                <button id="pos-view-folders-btn" onclick="App.setPOSViewMode('folders')" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0176D3] text-white flex items-center gap-1 transition-all" title="Billing X Category Folders Style">
+                  <i data-lucide="folder" class="w-3 h-3"></i>
+                  <span class="hidden md:inline">Categories</span>
+                </button>
+                <button id="pos-view-grid-btn" onclick="App.setPOSViewMode('grid')" class="px-2 py-0.5 rounded text-[10px] font-semibold text-[#706E6B] hover:text-[#0176D3] flex items-center gap-1 transition-all" title="Flat All Products Grid">
+                  <i data-lucide="grid" class="w-3 h-3"></i>
+                  <span class="hidden md:inline">All Items</span>
+                </button>
+              </div>
+
+              <span id="pos-products-count-badge" class="text-[10px] font-mono font-bold text-[#706E6B] bg-white px-2 py-1 rounded border border-[#DDDBDA] shrink-0">0 items</span>
+            </div>
+          </div>
+
+          <!-- Active Category Navigation Bar (Shown when inside a Category) -->
+          <div id="pos-category-header-bar" class="hidden flex items-center justify-between gap-2 bg-[#EBF7FE] border border-[#C5E8FC] rounded-lg px-3 py-1.5 transition-all">
+            <div class="flex items-center gap-2 overflow-hidden">
+              <button onclick="App.backToCategories()" class="px-2 py-1 rounded bg-white hover:bg-[#0176D3] hover:text-white text-[#0176D3] border border-[#C5E8FC] text-xs font-bold flex items-center gap-1 shadow-xs transition-all shrink-0">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Categories</span>
+              </button>
+              <div class="flex items-center gap-1.5 text-xs truncate">
+                <span id="pos-breadcrumb-dept" class="font-semibold text-[#706E6B]">Department</span>
+                <span class="text-[#706E6B]">›</span>
+                <span id="pos-breadcrumb-name" class="font-extrabold text-[#181818] truncate flex items-center gap-1">Category</span>
+                <span id="pos-breadcrumb-count" class="text-[10px] font-mono font-bold bg-white text-[#0176D3] px-2 py-0.2 rounded-full border border-[#C5E8FC] shrink-0">0 items</span>
               </div>
             </div>
-            <span id="pos-products-count-badge" class="text-[10px] font-mono font-bold text-[#706E6B] bg-[#F3F3F3] px-2 py-0.5 rounded border border-[#DDDBDA] shrink-0">0 items</span>
+
+            <!-- Sibling Category Pills for Quick Jump -->
+            <div id="pos-categories-container" class="flex items-center gap-1 overflow-x-auto max-w-[50%] shrink-0">
+              <!-- Dynamically populated sibling category pills -->
+            </div>
           </div>
         </div>
 
