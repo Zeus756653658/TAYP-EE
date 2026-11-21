@@ -99,30 +99,36 @@ app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
 if (FRONTEND_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0"
+}
+
 # Serve Dedicated Repass Standalone Password Reset Portal
 app.mount("/repass", StaticFiles(directory=str(REPASS_DIR), html=True), name="repass")
 
 @app.get("/repass")
 def serve_repass():
-    return FileResponse(REPASS_DIR / "index.html")
+    return FileResponse(REPASS_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 # Serve Dedicated Register Standalone Registration Portal
 app.mount("/register", StaticFiles(directory=str(REGISTER_DIR), html=True), name="register")
 
 @app.get("/register")
 def serve_register():
-    return FileResponse(REGISTER_DIR / "index.html")
+    return FileResponse(REGISTER_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 # Serve Dedicated Appointment Booking Standalone Portal
 app.mount("/appointment", StaticFiles(directory=str(APPOINTMENT_DIR), html=True), name="appointment")
 
 @app.get("/appointment")
 def serve_appointment():
-    return FileResponse(APPOINTMENT_DIR / "index.html")
+    return FileResponse(APPOINTMENT_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 @app.get("/booking")
 def serve_booking():
-    return FileResponse(APPOINTMENT_DIR / "index.html")
+    return FileResponse(APPOINTMENT_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 # Serve Favicons & App Icons
 @app.get("/favicon.ico")
@@ -151,7 +157,7 @@ def serve_apple_touch_icon():
 
 @app.get("/")
 def serve_index():
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return FileResponse(FRONTEND_DIR / "index.html", headers=NO_CACHE_HEADERS)
 
 if __name__ == "__main__":
     import uvicorn

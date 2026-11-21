@@ -108,6 +108,35 @@ def _cloud_headers(key: str) -> Dict[str, str]:
         "Prefer": "return=representation"
     }
 
+def cloud_fetch_setting(key: str) -> Optional[Any]:
+    conf = get_cloud_config()
+    if not conf.get("is_connected") or not conf.get("supabase_url"):
+        return None
+    try:
+        url = f"{conf['supabase_url']}/rest/v1/settings?key=eq.{key}&select=data"
+        res = requests.get(url, headers=_cloud_headers(conf['supabase_key']), timeout=6)
+        if res.status_code == 200:
+            rows = res.json()
+            if isinstance(rows, list) and len(rows) > 0:
+                return rows[0].get("data")
+    except Exception as e:
+        print(f"[Cloud Setting Error] Failed to fetch setting {key}: {e}")
+    return None
+
+def cloud_save_setting(key: str, data: Any) -> bool:
+    conf = get_cloud_config()
+    if not conf.get("is_connected") or not conf.get("supabase_url"):
+        return False
+    try:
+        url = f"{conf['supabase_url']}/rest/v1/settings"
+        headers = _cloud_headers(conf['supabase_key'])
+        headers["Prefer"] = "resolution=merge-duplicates"
+        res = requests.post(url, headers=headers, json={"key": key, "data": data}, timeout=6)
+        return res.status_code in (200, 201)
+    except Exception as e:
+        print(f"[Cloud Setting Error] Failed to save setting {key}: {e}")
+    return False
+
 def cloud_fetch_table(table: str) -> Optional[List[Dict[str, Any]]]:
     conf = get_cloud_config()
     if not conf.get("is_connected") or not conf.get("supabase_url") or not conf.get("tables_created"):

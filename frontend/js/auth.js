@@ -370,14 +370,27 @@ const AuthGate = {
     if (window.lucide) window.lucide.createIcons();
   },
 
+  // Helper to normalize username (auto-append @gmail.com for shorthand)
+  normalizeUsername(raw) {
+    let u = (raw || '').trim().toLowerCase();
+    if (u === 'admin') return 'admin@gmail.com';
+    if (u === 'taypeesales') return 'taypeesales@gmail.com';
+    if (u && !u.includes('@')) return u + '@gmail.com';
+    return u;
+  },
+
   // ==================== STEP 1: CHECK VERIFIED GMAIL USERNAME ====================
   async submitStep1Username() {
     const input = document.getElementById('auth-username-input');
     const btn = document.getElementById('auth-step1-btn');
-    const username = (input?.value || '').trim().toLowerCase();
+    let username = this.normalizeUsername(input?.value);
+
+    if (input && username && input.value !== username) {
+      input.value = username;
+    }
 
     if (!username || !username.endsWith('@gmail.com')) {
-      this.setMessage('Please enter a valid verified @gmail.com username.', 'error');
+      this.setMessage('Please enter a valid verified @gmail.com username (e.g. taypeesales@gmail.com or admin@gmail.com).', 'error');
       input?.focus();
       return;
     }
@@ -398,7 +411,7 @@ const AuthGate = {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || 'Username not found.');
+        throw new Error(data.detail || `Account "${username}" not registered. Please check spelling or contact Admin.`);
       }
 
       this.currentUsername = data.username;

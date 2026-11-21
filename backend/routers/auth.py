@@ -219,51 +219,88 @@ def is_smtp_configured(conf: Optional[Dict[str, Any]] = None) -> bool:
     return has_brevo or has_smtp
 
 
+def normalize_username(u: str) -> str:
+    """Auto-normalizes shorthand usernames (e.g. 'admin' or 'taypeesales' or 'username') to Gmail address."""
+    u = (u or "").strip().lower()
+    if u in ("admin", "administrator"):
+        return (os.getenv("ADMIN_USERNAME", "admin@gmail.com") or "admin@gmail.com").strip().lower()
+    if u == "taypeesales":
+        return "taypeesales@gmail.com"
+    if "@" not in u and u:
+        return f"{u}@gmail.com"
+    return u
+
+
 def ensure_default_users() -> List[Dict[str, Any]]:
-    """Ensures primary Admin user from .env is always synced in users database."""
+    """Ensures primary Admin users (admin, taypeesales, head.shapeupprofessional) are always seeded & synced in users database and Supabase Cloud."""
     users = load_json(USERS_FILE, [])
+    if not isinstance(users, list):
+        users = []
 
-    admin_user = (os.getenv("ADMIN_USERNAME", "admin@gmail.com") or "admin@gmail.com").strip().lower()
     admin_pass = os.getenv("ADMIN_PASSWORD", "admin123").strip()
-    admin_name = os.getenv("ADMIN_NAME", "Store Admin").strip()
+    primary_admin_user = (os.getenv("ADMIN_USERNAME", "admin@gmail.com") or "admin@gmail.com").strip().lower()
 
-    primary_idx = None
-    for idx, u in enumerate(users):
-        if u.get("id") == "USER-001" or u.get("is_env_admin"):
-            primary_idx = idx
-            break
-
-    if primary_idx is None:
-        default_admin = {
+    # Pre-defined default administrative accounts
+    default_accounts = [
+        {
             "id": "USER-001",
-            "username": admin_user,
-            "name": admin_name,
-            "password": hash_password(admin_pass),
+            "username": primary_admin_user,
+            "name": os.getenv("ADMIN_NAME", "Store Admin").strip(),
             "role": "admin",
             "active": True,
             "is_env_admin": True,
-            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S")
+        },
+        {
+            "id": "USER-002",
+            "username": "taypeesales@gmail.com",
+            "name": "TAYP EE Admin",
+            "role": "admin",
+            "active": True,
+            "is_env_admin": True,
+        },
+        {
+            "id": "USER-003",
+            "username": "head.shapeupprofessional@gmail.com",
+            "name": "Shape Up Professional Admin",
+            "role": "admin",
+            "active": True,
+            "is_env_admin": True,
         }
-        users.insert(0, default_admin)
+    ]
+
+    changed = False
+    for def_acc in default_accounts:
+        target_username = def_acc["username"]
+        found = False
+        for u in users:
+            if u.get("username", "").strip().lower() == target_username:
+                found = True
+                if not u.get("active", True):
+                    u["active"] = True
+                    changed = True
+                if u.get("role") != "admin":
+                    u["role"] = "admin"
+                    changed = True
+                if not u.get("password"):
+                    u["password"] = hash_password(admin_pass)
+                    changed = True
+                break
+        if not found:
+            new_acc = {
+                "id": def_acc["id"],
+                "username": target_username,
+                "name": def_acc["name"],
+                "password": hash_password(admin_pass),
+                "role": "admin",
+                "active": True,
+                "is_env_admin": True,
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S")
+            }
+            users.append(new_acc)
+            changed = True
+
+    if changed:
         save_json(USERS_FILE, users)
-        log_activity("USER_INIT", f"Initialized primary admin user from .env: {admin_user}")
-    else:
-        u = users[primary_idx]
-        changed = False
-        if u.get("username", "").strip().lower() != admin_user:
-            u["username"] = admin_user
-            changed = True
-        if u.get("name") != admin_name:
-            u["name"] = admin_name
-            changed = True
-        if not verify_password(admin_pass, u.get("password", "")):
-            u["password"] = hash_password(admin_pass)
-            changed = True
-        if not u.get("is_env_admin"):
-            u["is_env_admin"] = True
-            changed = True
-        if changed:
-            save_json(USERS_FILE, users)
 
     return users
 
@@ -547,8 +584,9 @@ def auth_status(request: Request):
 def check_username(payload: CheckUsernameSchema):
     """
     STEP 1: Verify that the entered Username is a valid & registered Verified Gmail account.
+    Supports shorthand (e.g. 'taypeesales' or 'admin').
     """
-    username = payload.username.strip().lower()
+    username = normalize_username(payload.username)
     if not username or not EMAIL_REGEX.match(username) or (not username.endswith("@gmail.com") and not username.endswith("@googlemail.com")):
         raise HTTPException(status_code=400, detail="Username must be a valid verified Gmail address (e.g. yourname@gmail.com).")
 
@@ -580,7 +618,7 @@ def login_step1(payload: LoginCredentialsSchema, response: Response):
     If valid, generate 6-digit code and dispatch to Gmail inbox.
     Returns challenge_id required for Step 2.
     """
-    username = payload.username.strip().lower()
+    username = normalize_username(payload.username)
     password = payload.password.strip()
 
     if not username or not password:
@@ -812,7 +850,7 @@ def forgot_password_request_otp(payload: ResetRequestSchema):
         raise HTTPException(status_code=400, detail="Invalid or expired Captcha code. Please refresh Captcha and try again.")
 
     # 2. Validate Username
-    username = payload.username.strip().lower()
+    username = normalize_username(payload.username)
     if not username or not EMAIL_REGEX.match(username) or (not username.endswith("@gmail.com") and not username.endswith("@googlemail.com")):
         raise HTTPException(status_code=400, detail="Please enter a valid verified Gmail username (e.g. yourname@gmail.com).")
 
@@ -1019,7 +1057,7 @@ def register_request_otp(payload: RegisterRequestOtpSchema):
         raise HTTPException(status_code=400, detail="Please enter your full name (minimum 2 characters).")
 
     # 3. Validate Gmail Username
-    username = payload.username.strip().lower()
+    username = normalize_username(payload.username)
     if not username or not EMAIL_REGEX.match(username) or (not username.endswith("@gmail.com") and not username.endswith("@googlemail.com")):
         raise HTTPException(status_code=400, detail="Registration username must be a valid verified Gmail address (e.g. name@gmail.com).")
 

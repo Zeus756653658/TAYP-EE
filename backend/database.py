@@ -8,6 +8,8 @@ import requests
 from backend.config import DATA_DIR, BACKUP_DIR
 from backend.cloud_db import (
     cloud_fetch_table, 
+    cloud_fetch_setting,
+    cloud_save_setting,
     export_cloud_backup_zip,
     get_cloud_config
 )
@@ -31,6 +33,19 @@ def load_json(filename: str, default: Any = None) -> Any:
 
     # 1. If Cloud is active, attempt to read from Cloud
     table_name = filename.replace(".json", "")
+
+    # Special Cloud Handling for Users (stored in Supabase 'settings' table under key='registered_users')
+    if table_name == "users":
+        cloud_users = cloud_fetch_setting("registered_users")
+        if cloud_users is not None and isinstance(cloud_users, list) and len(cloud_users) > 0:
+            save_json(filename, cloud_users, skip_cloud=True)
+            return cloud_users
+        if local_data is not None:
+            return local_data
+        if default is not None:
+            return default
+        return []
+
     cloud_data = cloud_fetch_table(table_name)
     if cloud_data is not None:
         # Guard: Do not wipe non-empty local catalog/data if cloud table is brand-new & empty
@@ -71,18 +86,21 @@ def save_json(filename: str, data: Any, skip_cloud: bool = False) -> bool:
             if not skip_cloud:
                 table_name = filename.replace(".json", "")
                 conf = get_cloud_config()
-                if conf.get("is_connected") and conf.get("tables_created"):
-                    url = conf["supabase_url"]
-                    headers = {
-                        "apikey": conf["supabase_key"],
-                        "Authorization": f"Bearer {conf['supabase_key']}",
-                        "Content-Type": "application/json",
-                        "Prefer": "resolution=merge-duplicates"
-                    }
-                    try:
-                        requests.post(f"{url}/rest/v1/{table_name}", headers=headers, json=data, timeout=5)
-                    except Exception as e:
-                        print(f"[Cloud Sync Error] {table_name}: {e}")
+                if conf.get("is_connected"):
+                    if table_name == "users":
+                        cloud_save_setting("registered_users", data)
+                    elif conf.get("tables_created"):
+                        url = conf["supabase_url"]
+                        headers = {
+                            "apikey": conf["supabase_key"],
+                            "Authorization": f"Bearer {conf['supabase_key']}",
+                            "Content-Type": "application/json",
+                            "Prefer": "resolution=merge-duplicates"
+                        }
+                        try:
+                            requests.post(f"{url}/rest/v1/{table_name}", headers=headers, json=data, timeout=5)
+                        except Exception as e:
+                            print(f"[Cloud Sync Error] {table_name}: {e}")
 
             return True
         except Exception as e:
